@@ -4,7 +4,7 @@ import pandas as pd
 
 class Account(object):
     """docstring for Account."""
-
+    print()
     def __init__(self, arg):
         super(Account, self).__init__()
         self.arg = arg
