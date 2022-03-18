@@ -3,13 +3,13 @@ from bank import Bank
 from people import People
 
 def main():
-    print("Hi, welome, select an option")
+    print("**Welcome to the Banking Application.\nPlease select an option to continue\n")
     bb = Bank()
     while True:
         bb.loadApplicationData()
-        print("1: create an account")
-        print("2: get an account")
-        print("3: exit")
+        print("1: Create an user profile")
+        print("2: Log into your user profile")
+        print("3: Exit Application")
 
         userInput = input("> ")
 

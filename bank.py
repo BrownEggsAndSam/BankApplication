@@ -22,7 +22,7 @@ class Bank(object):
             elif not os.path.exists('./SaveFiles/bankingApp.xlsx'):
                 self.df_userID.to_excel("./SaveFiles/bankingApp.xlsx")
             else:
-                xls = pd.ExcelFile('./RootKit_SaveFiles/bankingApp.xlsx')
+                xls = pd.ExcelFile('./SaveFiles/bankingApp.xlsx')
                 df1 = pd.read_excel(xls, 'Sheet1')
                 df2 = pd.read_excel(xls, 'Sheet2')
                 self.df_userID = pd.concat([self.df_userID, df1], axis=0, ignore_index=True)
@@ -47,7 +47,7 @@ class Bank(object):
         self.username = input("> ")
 
         try:
-            pin = int(input('Give Pin:'))
+            pin = int(input('Give Pin:\n> '))
             user = self.df_userID.loc[(self.df_userID["Username"]==self.username)]
             user = People(user["Username"].item(),int(user["Pin Number"].item()))
         except Exception as e:
@@ -63,18 +63,19 @@ class Bank(object):
         # #user = self.df_userID.isin([username]).any()
         
         if user.auth(pin):
-            print("YOU GOT IN")
+            print("**Access granted**\n\nWelcome back " + self.username + ".\nPlease select an about your bank accounts option to continue.\n")
             while True:
-                input_value = int(input('Enter 1 to choose an account of yours,\n2 to create a new account'))
+                input_value = int(input('1. Display bank accounts menu.\n2. Create a new checkings/savings account.\n> '))
                 if input_value == 1:
-                    input_value = int(input('Enter 1 to see all accounts,\n2 to deposit\n3 to withdraw\n'))
+
+                    print('**Bank accounts menu**\n\n')
+                    Account.getAccount(self)
+                    input_value = int(input('1. Deposit money to an account.\n2. Withdraw money from an account.\n3. Transfer money between accounts.\n> '))
                     if input_value == 1:
-                        Account.getAccount(self)
-                    elif input_value == 2:
                         Account.deposit(self)
-                    elif input_value == 3:
+                    elif input_value == 2:
                         Account.withdraw(self)
-                    elif input_value == 4:
+                    elif input_value == 3:
                         Account.transfer(self)
                 elif input_value == 2:
                     Account.createAccount(self)

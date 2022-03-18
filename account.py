@@ -8,33 +8,12 @@ class Account(object):
     def __init__(self, arg):
         super(Account, self).__init__()
         self.arg = arg
-        self.acc_id=0
-        self.balance=0
+        self.acc_id=int(0)
+        self.balance=float(0)
         self.acc_type=""
    
-
-    def deposit(self):
-            amount = float(input("Enter amount to be deposited: "))
-            self.balance += amount
-            print("\n Amount Deposited:", amount)
-    
-    # Function to withdraw the amount
-    def withdraw(self):
-            amount = float(input("Enter amount to be withdrawn: "))
-            if self.balance >= amount:
-                self.balance -= amount
-                print("\n You Withdrew:", amount)
-            else:
-                print("\n Insufficient balance  ")
-
-    # Function to display the amount
-    
-    def transfer(self):
-
-            print()
-
     def createAccount(self):
-        input_value = int(input('Enter 1 to create a Checking Account,\n2 to create a Savings Account,\n3 to exit the application'))
+        input_value = int(input('1.Create a Checking Account.\n2.Create a Savings Account.\n3.Exit application.'))
         if input_value == 1:
             self.acc_Type = "Checking"
             self.acc_id = len(self.df_Accounts)+1
@@ -58,5 +37,36 @@ class Account(object):
     def getAccount(self):
         print("Here is a list of all your accounts:")
         # print(self.df_Accounts['Username'].isin([self.username])) #Gives true statements
-        print(self.df_Accounts[self.df_Accounts.Username.isin([self.username])])
+        df1 = self.df_Accounts.loc[self.df_Accounts['Username']==self.username]
+        print(df1.to_string(index=False))
 
+    def deposit(self):
+            df1 = self.df_Accounts.loc[self.df_Accounts['Username']==self.username]
+            print(df1)
+            userInput = int(input("Select an account you would like to deposit into\n>"))
+            df1 = df1.loc[df1['Account Number']==userInput]
+            df1 = df1.reset_index(drop=True)
+            print(df1)
+            self.balance = df1.iloc[0,3]
+            print(self.balance)
+            #Want to record this transaction later on.
+            amount = float(input("Enter amount to be deposited: "))
+            self.balance += amount
+            print("\n Amount Deposited:", amount)
+            print("\n New balance:", self.balance)
+            #Need to record new balance into amount. 
+    
+    # Function to withdraw the amount
+    def withdraw(self):
+            amount = float(input("Enter amount to be withdrawn: "))
+            if self.balance >= amount:
+                self.balance -= amount
+                print("\n You Withdrew:", amount)
+            else:
+                print("\n Insufficient balance  ")
+
+    # Function to display the amount
+    
+    def transfer(self):
+
+            print()
