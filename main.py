@@ -115,3 +115,50 @@ results = pd.DataFrame({'word': words, 'prediction': predictions})
 
 # Write the DataFrame to an Excel file
 results.to_excel('output.xlsx', index=False)
+
+import nltk
+import pandas as pd
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+
+# Load the input data from an Excel file
+df = pd.read_excel('input.xlsx')
+
+# Split the data into the words and definitions
+words = df['word'].tolist()
+definitions = df['definition'].tolist()
+
+# Tokenize the text
+def tokenize_text(text):
+    # Tokenize the words
+    words = word_tokenize(text)
+    
+    # Remove stop words
+    stop_words = set(stopwords.words('english'))
+    words = [word for word in words if word.lower() not in stop_words]
+    
+    # Lemmatize the words
+    lemmatizer = WordNetLemmatizer()
+    words = [lemmatizer.lemmatize(word) for word in words]
+    
+    return words
+
+# Convert the definitions into numerical features
+vectorizer = TfidfVectorizer(tokenizer=tokenize_text)
+
+# Train the model
+classifier = MultinomialNB()
+
+# Fit the model to the training data
+classifier.fit(vectorizer.fit_transform(definitions), words)
+
+# Use the model to make predictions on a new list of words
+new_words = ['dog', 'cat', 'car', 'house']
+new_predictions = classifier.predict(vectorizer.transform(new_words))
+
+# Output the predictions to an Excel file
+results = pd.DataFrame({'word': new_words, 'definition': new_predictions})
+results.to_excel('output.xlsx', index=False)
