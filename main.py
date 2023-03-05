@@ -1,164 +1,81 @@
-import os
-from bank import Bank
-from people import People
-
-def main():
-    print("**Welcome to the Banking Application.\nPlease select an option to continue\n")
-    bb = Bank()
-    while True:
-        bb.loadApplicationData()
-        print("1: Create an user profile")
-        print("2: Log into your user profile")
-        print("3: Exit Application")
-
-        userInput = input("> ")
-
-        if userInput == "1":
-            bb.addUser()
-
-        if userInput == "2":
-            bb.getUser()
-
-        elif userInput == "3":
-            exit()
-
-if __name__ == '__main__':
-    main()
-
-    
-    import pandas as pd
-from sklearn.model_selection import train_test_split
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Embedding, LSTM, Dense
-from keras.models import Sequential
-
-# 1. Collect a dataset of input-output pairs
-# Assuming you have a csv file with columns 'word' and 'definition'
-data = pd.read_csv('definition_data.csv')
-
-# 2. Preprocess the data
-# Tokenize the input words
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(data['word'])
-word_seq = tokenizer.texts_to_sequences(data['word'])
-# Pad the input sequences to have the same length
-max_length = max([len(seq) for seq in word_seq])
-word_seq = pad_sequences(word_seq, maxlen=max_length)
-
-# 3. Split the data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(word_seq, data['definition'], test_size=0.2)
-
-# 4. Select a model architecture
-model = Sequential()
-model.add(Embedding(input_dim=len(tokenizer.word_index)+1, output_dim=100, input_length=max_length))
-model.add(LSTM(64))
-model.add(Dense(64, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
-
-# 5. Train the model
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.fit(X_train, y_train, batch_size=32, epochs=5)
-
-# 6. Evaluate the model on the test set
-score, accuracy = model.evaluate(X_test, y_test, batch_size=32)
-print('Test score:', score)
-print('Test accuracy:', accuracy)
-
-
 import pandas as pd
+from fuzzywuzzy import fuzz
+from itertools import product
 
-# Make predictions on the test set
-predictions = model.predict(X_test)
 
-# Create a DataFrame to store the results
-results = pd.DataFrame({'word': data['word'][X_test.index], 'definition': y_test, 'prediction': predictions})
+# Load data
+edg_df = pd.read_excel('EDG.xlsx')
+test_df = pd.read_excel('test.xlsx')
+synonyms_df = pd.read_excel('Synonyms.xlsx')
 
-# Write the DataFrame to an Excel file
-results.to_excel('model_results.xlsx', index=False)
 
-# input new words
-new_words = ['example1', 'example2', 'example3']
+# Define synonym mapping function
+def map_synonyms(synonyms_df):
+    synonym_dict = {}
+    for index, row in synonyms_df.iterrows():
+        words = row['Word'].split(",")
+        for word in words:
+            synonym_dict[word.strip()] = row['Synonyms'].strip()
+    return synonym_dict
 
-# tokenize the new words
-new_word_seq = tokenizer.texts_to_sequences(new_words)
 
-# pad the new input sequences
-new_word_seq = pad_sequences(new_word_seq, maxlen=max_length)
+# Map synonyms
+synonym_dict = map_synonyms(synonyms_df)
 
-# use the model to make predictions
-new_predictions = model.predict(new_word_seq)
 
-# output the predictions
-for word, pred in zip(new_words, new_predictions):
-    print(f"{word}: {pred}")
+# Define function to apply synonym mapping
+def replace_synonyms(text, synonym_dict):
+    words = text.split()
+    for i in range(len(words)):
+        if words[i] in synonym_dict:
+            words[i] = synonym_dict[words[i]]
+    return " ".join(words)
 
-    import pandas as pd
 
-# Read the input Excel file
-df = pd.read_excel('input.xlsx')
+# Apply synonym mapping to EDG dataframe
+edg_df['Product Name'] = edg_df['Product Name'].apply(lambda x: replace_synonyms(x, synonym_dict))
+edg_df['Product Description'] = edg_df['Product Description'].apply(lambda x: replace_synonyms(x, synonym_dict))
 
-# Extract the list of words from the file
-words = df['word'].tolist()
 
-# Tokenize the words
-word_seq = tokenizer.texts_to_sequences(words)
+# Define function to get top N matches for each query
+def get_top_matches(query, choices, limit, min_score=None):
+    ratios = []
+    for choice in choices:
+        ratio = fuzz.token_set_ratio(query, choice)
+        if min_score is None or ratio >= min_score:
+            ratios.append((choice, ratio))
+    ratios = sorted(ratios, key=lambda x: x[1], reverse=True)
+    return ratios[:limit]
 
-# Pad the input sequences
-word_seq = pad_sequences(word_seq, maxlen=max_length)
 
-# Use the model to make predictions
-predictions = model.predict(word_seq)
+# Define function to get top N matches for each query in EDG dataframe
+def get_top_matches_edg(row, limit):
+    name_matches = get_top_matches(row['Product Name'], test_df['Product Name'], limit,35)
+    desc_matches = get_top_matches(row['Product Description'], test_df['Product Name'], limit, 35)
+    name_df = pd.DataFrame(name_matches, columns=['Name Prediction', 'Name Score'])
+    desc_df = pd.DataFrame(desc_matches, columns=['Desc Prediction', 'Desc Score'])
+    name_df['ATTRID'] = row['AttributeID']
+    name_df['Product Name'] = row['Product Name']
+    name_df['Product Description'] = row['Product Description']
+    desc_df['ATTRID'] = row['AttributeID']
+    desc_df['Product Name'] = row['Product Name']
+    desc_df['Product Description'] = row['Product Description']
+    return name_df, desc_df
 
-# Create a DataFrame to store the results
-results = pd.DataFrame({'word': words, 'prediction': predictions})
 
-# Write the DataFrame to an Excel file
-results.to_excel('output.xlsx', index=False)
+# Get top matches for each row in EDG dataframe
+name_dfs = []
+desc_dfs = []
+for index, row in edg_df.iterrows():
+    name_df, desc_df = get_top_matches_edg(row, 5)
+    name_dfs.append(name_df)
+    desc_dfs.append(desc_df)
 
-import nltk
-import pandas as pd
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+# Combine dataframes for each EDG row
+name_matches_df = pd.concat(name_dfs, axis=0)
+desc_matches_df = pd.concat(desc_dfs, axis=0)
 
-# Load the input data from an Excel file
-df = pd.read_excel('input.xlsx')
-
-# Split the data into the words and definitions
-words = df['word'].tolist()
-definitions = df['definition'].tolist()
-
-# Tokenize the text
-def tokenize_text(text):
-    # Tokenize the words
-    words = word_tokenize(text)
-    
-    # Remove stop words
-    stop_words = set(stopwords.words('english'))
-    words = [word for word in words if word.lower() not in stop_words]
-    
-    # Lemmatize the words
-    lemmatizer = WordNetLemmatizer()
-    words = [lemmatizer.lemmatize(word) for word in words]
-    
-    return words
-
-# Convert the definitions into numerical features
-vectorizer = TfidfVectorizer(tokenizer=tokenize_text)
-
-# Train the model
-classifier = MultinomialNB()
-
-# Fit the model to the training data
-classifier.fit(vectorizer.fit_transform(definitions), words)
-
-# Use the model to make predictions on a new list of words
-new_words = ['dog', 'cat', 'car', 'house']
-new_predictions = classifier.predict(vectorizer.transform(new_words))
-
-# Output the predictions to an Excel file
-results = pd.DataFrame({'word': new_words, 'definition': new_predictions})
-results.to_excel('output.xlsx', index=False)
+# Output dataframes to separate sheets in output Excel file
+with pd.ExcelWriter('output25.xlsx') as writer:
+    name_matches_df.to_excel(writer, sheet_name='Name Predictions', index=False)
+    desc_matches_df.to_excel(writer, sheet_name='Desc Predictions', index=False)
