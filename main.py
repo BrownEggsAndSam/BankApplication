@@ -1,49 +1,76 @@
-import pyodbc
+import os
 import sqlparse
-from sqlparse.sql import IdentifierList, Identifier
-from sqlparse.tokens import Keyword, DML
+from collections import defaultdict
+from sqlparse.sql import IdentifierList, Identifier, Function, Parenthesis
+from sqlparse.tokens import Keyword, DML, Name
 
-# Function to extract table names from SQL query
-def extract_tables(sql):
-    tables = []
-    parsed = sqlparse.parse(sql)
+def extract_tables_and_columns(parsed):
+    tables_columns = defaultdict(set)
 
-    for item in parsed:
-        for token in item.tokens:
-            if isinstance(token, IdentifierList):
-                for identifier in token.get_identifiers():
-                    tables.append(str(identifier))
-            elif isinstance(token, Identifier):
-                tables.append(str(token))
-            elif token.ttype == Keyword and token.value.upper() == "FROM":
-                tables.append(str(token))
+    for token in parsed.tokens:
+        if isinstance(token, IdentifierList):
+            for identifier in token.get_identifiers():
+                if isinstance(identifier, Identifier):
+                    column = str(identifier)
+                    table, _, _ = column.partition(".")
+                    tables_columns[table].add(column)
+        elif isinstance(token, Identifier):
+            column = str(token)
+            table, _, _ = column.partition(".")
+            tables_columns[table].add(column)
 
-    return tables
+    return tables_columns
 
-# Connect to AccessDB
-conn_str = (
-    r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
-    r"DBQ=path\to\your\database.accdb;"
-)
-conn = pyodbc.connect(conn_str)
+def extract_join(parsed):
+    join_type = None
+    join_condition = None
+    join_found = False
 
-# Pick a query (replace 'your_query_name' with the actual query name)
-query_name = "your_query_name"
-sql = ""
+    for token in parsed.tokens:
+        if token.ttype == Keyword and token.value.upper() in ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN"]:
+            join_type = token.value
+            join_found = True
+        elif join_found and token.ttype == Keyword and token.value.upper() == "ON":
+            for sibling in token.parent.tokens[token.parent.token_index(token):]:
+                if sibling.ttype not in [Keyword, Name]:
+                    join_condition = str(sibling)
+                    break
+            break
 
-cursor = conn.cursor()
-for row in cursor.tables(tableType="VIEW"):
-    if row.table_name == query_name:
-        cursor2 = conn.cursor()
-        cursor2.execute(f"SELECT * FROM {query_name}")
-        sql = cursor2.getdescription()
+    return join_type, join_condition
 
-# Show the table's data lineage
-if sql:
-    tables = extract_tables(sql)
-    print("Data lineage (tables):", tables)
-else:
-    print(f"No query found with the name '{query_name}'")
+def read_sql_file(file_path):
+    with open(file_path, 'r') as f:
+        return f.read()
 
-cursor.close()
-conn.close()
+# Read SQL script from input.txt
+input_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input", "input.txt")
+sql = read_sql_file(input_file)
+
+# Parse SQL script and extract tables, columns, and join information
+parsed = sqlparse.parse(sql)[0]
+tables_columns = extract_tables_and_columns(parsed)
+join_type, join_condition = extract_join(parsed)
+
+# Print in-depth analysis
+print("Tables used:", ', '.join(tables_columns.keys()))
+print("Columns used from each table:")
+for table, columns in tables_columns.items():
+    print(f"{table}: {', '.join(columns)}")
+
+if join_type and join_condition:
+    print("Join operation:")
+    print(f"  - Type: {join_type}")
+    print(f"  - Join condition: {join_condition}")
+
+# If the SQL script has an ORDER BY clause
+if parsed.token_first(skip_ws=True, skip_cm=True).value.upper() == "SELECT":
+    orderby_found = False
+    for token in parsed.tokens:
+        if token.ttype == Keyword and token.value.upper() == "ORDER":
+            orderby_found = True
+        elif orderby_found and token.ttype == Keyword and token.value.upper() == "BY":
+            order_columns = [str(t) for t in token.parent.tokens[token.parent.token_index(token) + 1:][0].get_identifiers()]
+            print("Ordering:")
+            print(f"  - Columns: {', '.join(order_columns)}")
+            break
