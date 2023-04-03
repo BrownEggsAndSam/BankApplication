@@ -1,69 +1,37 @@
-import os
-import sqlparse
-from collections import defaultdict
-from sqlparse.sql import IdentifierList, Identifier, Function, Parenthesis
-from sqlparse.tokens import Keyword, DML, Name
+import openpyxl
+from openpyxl import Workbook
 
-def extract_tables_and_columns(parsed):
-    tables_columns = defaultdict(set)
+def create_excel_report(general_report, tables_columns):
+    wb = Workbook()
 
-    for token in parsed.tokens:
-        if isinstance(token, IdentifierList):
-            for identifier in token.get_identifiers():
-                if isinstance(identifier, Identifier):
-                    column = str(identifier)
-                    table, _, _ = column.partition(".")
-                    tables_columns[table].add(column)
-        elif isinstance(token, Identifier):
-            column = str(token)
-            table, _, _ = column.partition(".")
-            tables_columns[table].add(column)
+    # Create a general report sheet
+    general_sheet = wb.active
+    general_sheet.title = "General Report"
 
-    return tables_columns
+    for idx, line in enumerate(general_report.split('\n'), start=1):
+        general_sheet.cell(row=idx, column=1, value=line)
 
-def extract_join(parsed):
-    join_type = None
-    join_condition = None
-    join_found = False
+    # Create a sheet for each table
+    for table, columns in tables_columns.items():
+        table_sheet = wb.create_sheet(title=table)
+        table_sheet.cell(row=1, column=1, value=f"Table: {table}")
+        table_sheet.cell(row=2, column=1, value="Columns used:")
 
-    for token in parsed.tokens:
-        if token.ttype == Keyword and token.value.upper() in ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN"]:
-            join_type = token.value
-            join_found = True
-        elif join_found and token.ttype == Keyword and token.value.upper() == "ON":
-            for sibling in token.parent.tokens[token.parent.token_index(token):]:
-                if sibling.ttype not in [Keyword, Name]:
-                    join_condition = str(sibling)
-                    break
-            break
+        for idx, column in enumerate(columns, start=1):
+            table_sheet.cell(row=idx+2, column=2, value=column)
 
-    return join_type, join_condition
+    # Save the workbook
+    wb.save("report.xlsx")
 
-def read_sql_file(file_path):
-    with open(file_path, 'r') as f:
-        return f.read()
-
-# Read SQL script from input.txt
-input_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "input", "input.txt")
-sql = read_sql_file(input_file)
-
-# Parse SQL script and extract tables, columns, and join information
-parsed = sqlparse.parse(sql)[0]
-tables_columns = extract_tables_and_columns(parsed)
-join_type, join_condition = extract_join(parsed)
-
-# Print in-depth analysis
-print("Tables used:", ', '.join(tables_columns.keys()))
-print("Columns used from each table:")
-for table, columns in tables_columns.items():
-    print(f"{table}: {', '.join(columns)}")
+# Generate a general report
+general_report = ""
+general_report += f"Tables used: {', '.join(tables_columns.keys())}\n"
 
 if join_type and join_condition:
-    print("Join operation:")
-    print(f"  - Type: {join_type}")
-    print(f"  - Join condition: {join_condition}")
+    general_report += "Join operation:\n"
+    general_report += f"  - Type: {join_type}\n"
+    general_report += f"  - Join condition: {join_condition}\n"
 
-# If the SQL script has an ORDER BY clause
 if parsed.token_first(skip_ws=True, skip_cm=True).value.upper() == "SELECT":
     orderby_found = False
     for token in parsed.tokens:
@@ -71,6 +39,9 @@ if parsed.token_first(skip_ws=True, skip_cm=True).value.upper() == "SELECT":
             orderby_found = True
         elif orderby_found and token.ttype == Keyword and token.value.upper() == "BY":
             order_columns = [str(t) for t in token.parent.tokens[token.parent.token_index(token) + 1:][0].get_identifiers()]
-            print("Ordering:")
-            print(f"  - Columns: {', '.join(order_columns)}")
+            general_report += "Ordering:\n"
+            general_report += f"  - Columns: {', '.join(order_columns)}\n"
             break
+
+# Create and save the Excel report
+create_excel_report(general_report, tables_columns)
