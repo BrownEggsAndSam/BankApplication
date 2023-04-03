@@ -1,53 +1,49 @@
-import pandas as pd
-import time
-from pathlib import Path
+import pyodbc
+import sqlparse
+from sqlparse.sql import IdentifierList, Identifier
+from sqlparse.tokens import Keyword, DML
 
-def read_excel_files(pdd_file, dset_file):
-    pdd = pd.read_excel(pdd_file)
-    dset = pd.read_excel(dset_file)
-    return pdd, dset
+# Function to extract table names from SQL query
+def extract_tables(sql):
+    tables = []
+    parsed = sqlparse.parse(sql)
 
-def merge_files(pdd, dset):
-    pdd = pdd.rename(columns={"PDD ID": "PDD+DSETID"})
-    dset = dset.rename(columns={"DSET ID": "PDD+DSETID"})
-    return pd.concat([pdd, dset], ignore_index=True)
+    for item in parsed:
+        for token in item.tokens:
+            if isinstance(token, IdentifierList):
+                for identifier in token.get_identifiers():
+                    tables.append(str(identifier))
+            elif isinstance(token, Identifier):
+                tables.append(str(token))
+            elif token.ttype == Keyword and token.value.upper() == "FROM":
+                tables.append(str(token))
 
-def filter_valid_invalid_ids(df):
-    valid_ids = df['Attribute ID'].str.match(r'ATTR\d{5}$')
-    valid_df = df[valid_ids].reset_index(drop=True)
-    invalid_df = df[~valid_ids].reset_index(drop=True)
-    return valid_df, invalid_df
+    return tables
 
-def count_occurrences(df):
-    return df.groupby(['Physical Name', 'Attribute ID']).size().reset_index(name='Count Of Groupings')
+# Connect to AccessDB
+conn_str = (
+    r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+    r"DBQ=path\to\your\database.accdb;"
+)
+conn = pyodbc.connect(conn_str)
 
-def save_files(valid_df, invalid_df, occurrences_file, invalid_file):
-    valid_df.to_excel(occurrences_file, index=False)
-    invalid_df.to_excel(invalid_file, index=False)
+# Pick a query (replace 'your_query_name' with the actual query name)
+query_name = "your_query_name"
+sql = ""
 
-def main(pdd_file, dset_file, occurrences_file, invalid_file):
-    start_time = time.time()
-    print("Reading Excel files...")
-    pdd, dset = read_excel_files(pdd_file, dset_file)
+cursor = conn.cursor()
+for row in cursor.tables(tableType="VIEW"):
+    if row.table_name == query_name:
+        cursor2 = conn.cursor()
+        cursor2.execute(f"SELECT * FROM {query_name}")
+        sql = cursor2.getdescription()
 
-    print("Merging PDD and DSET files...")
-    merged_df = merge_files(pdd, dset)
+# Show the table's data lineage
+if sql:
+    tables = extract_tables(sql)
+    print("Data lineage (tables):", tables)
+else:
+    print(f"No query found with the name '{query_name}'")
 
-    print("Filtering valid and invalid Attribute IDs...")
-    valid_df, invalid_df = filter_valid_invalid_ids(merged_df)
-
-    print("Counting occurrences of unique Physical Name and Attribute ID groupings...")
-    valid_df = count_occurrences(valid_df)
-
-    print("Saving occurrences and invalid IDs to Excel files...")
-    save_files(valid_df, invalid_df, occurrences_file, invalid_file)
-
-    print("Process completed. Time taken: {:.2f} seconds.".format(time.time() - start_time))
-
-file_path = './Big NLP Tool/PDD+DSET/'
-pdd_file = file_path +"PDD.xlsx"
-dset_file = file_path + "DSET.xlsx"
-occurrences_file = file_path + "Occurrences.xlsx"
-invalid_file = file_path + "Invalid_Attribute_IDs.xlsx"
-
-main(pdd_file, dset_file, occurrences_file, invalid_file)
+cursor.close()
+conn.close()
