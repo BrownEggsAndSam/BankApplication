@@ -33,4 +33,3 @@ with pd.ExcelWriter('Report.xlsx') as writer:
     edl_merged_df.to_excel(writer, index=False, sheet_name='Merged Data')
     attribute_registry_counts.to_excel(writer, index=False, sheet_name='Attribute Registry ID Counts')
     assigned_attribute_registry_counts.to_excel(writer, index=False, sheet_name='Assigned Attribute Registry ID Counts')
-
