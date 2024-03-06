@@ -17,7 +17,19 @@ edl_merged_df.rename(columns={'Attribute Name': 'Attribute Name (Assigned Regist
 # Drop the redundant columns
 edl_merged_df.drop(columns=['Attribute ID_x', 'Attribute ID_y'], inplace=True)
 
-# Create separate sheets for count of occurrences of each attribute ID
+# Split the "Merged Data" dataframe into smaller chunks
+chunk_size = 100000  # Adjust the chunk size as needed
+num_chunks = len(edl_merged_df) // chunk_size + 1
+chunks = [edl_merged_df[i:i + chunk_size] for i in range(0, len(edl_merged_df), chunk_size)]
+
+# Create Excel writer object
+writer = pd.ExcelWriter('Report.xlsx', engine='xlsxwriter')
+
+# Write to Excel file with two separate sheets
+for i, chunk in enumerate(chunks):
+    sheet_name = f'Merged Data {i+1}'
+    chunk.to_excel(writer, index=False, sheet_name=sheet_name)
+
 attribute_registry_counts = edl_merged_df['Attribute Registry ID'].value_counts().reset_index()
 attribute_registry_counts.columns = ['Attribute Registry ID', 'Count']
 attribute_registry_counts = attribute_registry_counts.merge(consolidated_df, how='left', left_on='Attribute Registry ID', right_on='Attribute ID')
@@ -28,8 +40,9 @@ assigned_attribute_registry_counts.columns = ['Assigned Attribute Registry ID', 
 assigned_attribute_registry_counts = assigned_attribute_registry_counts.merge(consolidated_df, how='left', left_on='Assigned Attribute Registry ID', right_on='Attribute ID')
 assigned_attribute_registry_counts.rename(columns={'Attribute Name': 'Attribute Name (Assigned Registry ID)', 'Domain': 'Domain (Assigned Registry ID)'}, inplace=True)
 
-# Write to Excel file with two separate sheets
-with pd.ExcelWriter('Report.xlsx') as writer:
-    edl_merged_df.to_excel(writer, index=False, sheet_name='Merged Data')
-    attribute_registry_counts.to_excel(writer, index=False, sheet_name='Attribute Registry ID Counts')
-    assigned_attribute_registry_counts.to_excel(writer, index=False, sheet_name='Assigned Attribute Registry ID Counts')
+# Write to separate sheets
+attribute_registry_counts.to_excel(writer, index=False, sheet_name='Attribute Registry ID Counts')
+assigned_attribute_registry_counts.to_excel(writer, index=False, sheet_name='Assigned Attribute Registry ID Counts')
+
+# Save and close the Excel writer
+writer.save()
