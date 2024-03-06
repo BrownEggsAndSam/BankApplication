@@ -1,15 +1,12 @@
 import pandas as pd
 
-# Read the dropped EDL file and the Consolidated EDG file
+# Read the dropped EDL file
 edl_dropped_df = pd.read_excel('EDL_Dropped.xlsx')
-consolidated_df = pd.read_excel('Consolidated_EDG.xlsx')
 
-# Merge the dataframes on 'Attribute Registry ID' and 'Assigned Attribute Registry ID'
-merged_df = pd.merge(edl_dropped_df, consolidated_df, left_on='Attribute Registry ID', right_on='Attribute ID', suffixes=('_left', '_right'))
-merged_df = pd.merge(merged_df, consolidated_df, left_on='Assigned Attribute Registry ID', right_on='Attribute ID', suffixes=('_left', '_right'))
+# Count occurrences of each unique 'Attribute Registry ID'
+attribute_registry_counts = edl_dropped_df['Attribute Registry ID'].value_counts().reset_index()
+attribute_registry_counts.columns = ['Attribute Registry ID', 'Count']
 
-# Drop unnecessary columns
-merged_df.drop(['Attribute ID_left', 'Attribute ID_right'], axis=1, inplace=True)
-
-# Save the merged DataFrame to a new Excel file
-merged_df.to_excel('EDL_Merged.xlsx', index=False)
+# Save the counts to a new Excel workbook
+with pd.ExcelWriter('Attribute_Registry_Counts.xlsx') as writer:
+    attribute_registry_counts.to_excel(writer, index=False)
