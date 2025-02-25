@@ -1,144 +1,114 @@
-from ui import start_ui  # Import UI startup function
-
-if __name__ == "__main__":
-    start_ui()  # Runs the program
-
-
-
-#ui.py
-
-import tkinter as tk
-from tkinter import filedialog, messagebox
-import os
-from processor import process_file  # Import processing function
-
-# ---------------------- FUNCTION TO HANDLE FILE SELECTION ----------------------
-def select_file():
-    global file_path
-    file_path = filedialog.askopenfilename(
-        title="Select Excel File",
-        filetypes=[("Excel Files", "*.xlsx;*.xls")]
-    )
-    if file_path:
-        file_label.config(text=f"📂 Selected: {os.path.basename(file_path)}")
-
-# ---------------------- FUNCTION TO RUN PROCESSING ----------------------
-def run_processing():
-    global file_path  
-    if not file_path:
-        messagebox.showerror("Error", "No file selected. Please select an Excel file first.")
-        return
-
-    threshold = threshold_slider.get()  # Get threshold from slider
-    result = process_file(file_path, threshold)  # Call processing function
-
-    if "Error" in result:
-        messagebox.showerror("Processing Failed", result)
-    else:
-        messagebox.showinfo("Success", f"✅ Processing complete!\nResults saved at: {result}")
-
-# ---------------------- FUNCTION TO UPDATE SLIDER LABEL ----------------------
-def update_threshold_label(value):
-    threshold_label.config(text=f"Threshold: {float(value):.2f}")  # Update label with slider value
-
-# ---------------------- CREATE UI ----------------------
-root = tk.Tk()
-root.title("Privacy Data Processor")
-root.geometry("400x300")
-
-# Heading
-tk.Label(root, text="Privacy Data Processor", font=("Arial", 14, "bold")).pack(pady=10)
-
-# Select File Button
-file_path = ""
-select_button = tk.Button(root, text="Select Input File", command=select_file, font=("Arial", 12))
-select_button.pack(pady=5)
-
-# File label
-file_label = tk.Label(root, text="No file selected", font=("Arial", 10), fg="red")
-file_label.pack()
-
-# Threshold selection
-threshold_label = tk.Label(root, text="Threshold: 0.60", font=("Arial", 10))
-threshold_label.pack()
-
-threshold_slider = tk.Scale(root, from_=0.1, to=1.0, resolution=0.05, orient="horizontal", length=300, command=update_threshold_label)
-threshold_slider.set(0.6)  # Default value
-threshold_slider.pack()
-
-# Start Button
-start_button = tk.Button(root, text="Start Processing", command=run_processing, font=("Arial", 12), bg="green", fg="white")
-start_button.pack(pady=20)
-
-# Run the UI
-root.mainloop()
-
-#processor.py
 import pandas as pd
-import os
+import time
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
+from rapidfuzz import fuzz, process
+from gensim.models import KeyedVectors
+from scipy.spatial.distance import euclidean
 
-# ---------------------- FUNCTION TO PROCESS FILE ----------------------
-def process_file(file_path, threshold):
-    """Processes the Excel file and applies fuzzy matching based on the given threshold."""
-    try:
-        df = pd.read_excel(file_path)
+# Load pre-trained Word2Vec model (optional for WMD)
+# model = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
 
-        # Keep only relevant columns and ensure unique values
-        key = df[['Attribute Registry ID', 'Name', 'Definition', 'Privacy Designation', 'CreatedOn']].drop_duplicates()
+def load_data(edg_file, request_file):
+    print("Loading Excel files...")
+    edg = pd.read_excel(edg_file)
+    request = pd.read_excel(request_file)
+    print("Files loaded successfully.")
+    return edg, request
 
-        # ------------------- JACCARD SIMILARITY FUNCTION -------------------
-        def jaccard_similarity(str1, str2):
-            set1, set2 = set(str1.lower().split()), set(str2.lower().split())
-            return len(set1 & set2) / len(set1 | set2) if (set1 | set2) else 0
+def compute_tfidf_similarity(edg_defs, request_defs):
+    print("Computing TF-IDF Cosine Similarity...")
+    start_time = time.time()
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(edg_defs + request_defs)
+    edg_tfidf = tfidf_matrix[:len(edg_defs)]
+    request_tfidf = tfidf_matrix[len(edg_defs):]
+    similarity_matrix = cosine_similarity(request_tfidf, edg_tfidf)
+    print(f"TF-IDF Computation Time: {time.time() - start_time:.2f} seconds")
+    return similarity_matrix
 
-        # Group similar definitions based on threshold
-        grouped_dict = {}
-        group_counter = 0
+def compute_bert_similarity(edg_defs, request_defs):
+    print("Computing BERT Embedding Similarity...")
+    start_time = time.time()
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    edg_embeddings = model.encode(edg_defs, convert_to_tensor=True)
+    request_embeddings = model.encode(request_defs, convert_to_tensor=True)
+    similarity_matrix = cosine_similarity(request_embeddings.cpu(), edg_embeddings.cpu())
+    print(f"BERT Computation Time: {time.time() - start_time:.2f} seconds")
+    return similarity_matrix
 
-        for idx, row in key.iterrows():
-            definition = row['Definition']
-            matched_group = None
+def compute_jaccard_similarity(edg_defs, request_defs):
+    print("Computing Jaccard Similarity...")
+    start_time = time.time()
+    def jaccard(str1, str2):
+        set1, set2 = set(str1.split()), set(str2.split())
+        return len(set1 & set2) / len(set1 | set2)
+    
+    similarity_matrix = np.zeros((len(request_defs), len(edg_defs)))
+    for i, r_def in tqdm(enumerate(request_defs), total=len(request_defs)):
+        for j, e_def in enumerate(edg_defs):
+            similarity_matrix[i, j] = jaccard(r_def, e_def)
+    print(f"Jaccard Computation Time: {time.time() - start_time:.2f} seconds")
+    return similarity_matrix
 
-            for group, definitions in grouped_dict.items():
-                if any(jaccard_similarity(definition, existing_def) >= threshold for existing_def in definitions):
-                    matched_group = group
-                    break
+def compute_levenshtein_similarity(edg_defs, request_defs):
+    print("Computing Levenshtein Similarity...")
+    start_time = time.time()
+    similarity_matrix = np.zeros((len(request_defs), len(edg_defs)))
+    for i, r_def in tqdm(enumerate(request_defs), total=len(request_defs)):
+        for j, e_def in enumerate(edg_defs):
+            similarity_matrix[i, j] = fuzz.ratio(r_def, e_def) / 100
+    print(f"Levenshtein Computation Time: {time.time() - start_time:.2f} seconds")
+    return similarity_matrix
 
-            if matched_group:
-                grouped_dict[matched_group].append(definition)
-            else:
-                grouped_dict[f"group_{group_counter}"] = [definition]
-                group_counter += 1
+def generate_output(similarity_matrix, request_df, edg_df, method, writer):
+    threshold = 0.7
+    results = []
+    print(f"Processing {method} results...")
+    for i, row in enumerate(similarity_matrix):
+        matches = sorted(enumerate(row), key=lambda x: x[1], reverse=True)
+        for idx, score in matches:
+            if score >= threshold:
+                results.append([
+                    request_df.iloc[i]['Attribute ID'], request_df.iloc[i]['Definition'],
+                    edg_df.iloc[idx]['Attribute ID'], edg_df.iloc[idx]['Attribute Definition'],
+                    score
+                ])
+    
+    df_results = pd.DataFrame(results, columns=['Request Attribute ID', 'Request Definition',
+                                                'Matched Attribute ID', 'Matched Definition',
+                                                'Similarity Score'])
+    df_results.sort_values(by='Similarity Score', ascending=False, inplace=True)
+    df_results.to_excel(writer, sheet_name=method, index=False)
+    print(f"{method} results saved.")
 
-        # Map definitions to grouped strings
-        definition_to_group = {definition: group for group, definitions in grouped_dict.items() for definition in definitions}
-        key['grouped_str'] = key['Definition'].map(definition_to_group)
+def main():
+    edg_file = input("Enter path to EDG file: ")
+    request_file = input("Enter path to Request Document: ")
+    output_file = "Similarity_Results.xlsx"
+    
+    edg_df, request_df = load_data(edg_file, request_file)
+    edg_defs = edg_df['Attribute Definition'].fillna("").tolist()
+    request_defs = request_df['Definition'].fillna("").tolist()
+    
+    writer = pd.ExcelWriter(output_file, engine='xlsxwriter')
+    
+    similarity_methods = {
+        'TF-IDF': compute_tfidf_similarity,
+        'BERT': compute_bert_similarity,
+        'Jaccard': compute_jaccard_similarity,
+        'Levenshtein': compute_levenshtein_similarity
+    }
+    
+    for method, func in similarity_methods.items():
+        sim_matrix = func(edg_defs, request_defs)
+        generate_output(sim_matrix, request_df, edg_df, method, writer)
+    
+    writer.close()
+    print(f"Results saved in {output_file}")
 
-        # Standardize grouped string values
-        key['grouped_str'] = key['grouped_str'].str.lower().str.strip()
-
-        # ------------------- CREATE SUMMARY TABLE -------------------
-        key_summary = key.groupby(['grouped_str', 'Privacy Designation']).size().unstack(fill_value=0)
-        key_summary.reset_index(inplace=True)
-
-        # Identify discrepancies
-        key_summary['potential_discrepancy'] = (
-            (key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI', 0) > 0) |
-            (key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI In Combination - Personally Identifiable', 0) > 0) |
-            (key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI In Combination - Not Publicly Available', 0) > 0)
-        )
-
-        # Filter discrepancies
-        potential_observation = key_summary[key_summary['potential_discrepancy']]
-        potential_observation_ids = pd.merge(potential_observation, key, on="grouped_str", how="left")
-
-        # Save results
-        output_file = os.path.join(os.path.dirname(file_path), "NPI_example.xlsx")
-        potential_observation_ids.to_excel(output_file, index=False)
-
-        return output_file  # Return the saved file path
-
-    except Exception as e:
-        return f"Error: {str(e)}"
+if __name__ == "__main__":
+    main()
