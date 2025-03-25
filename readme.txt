@@ -20,6 +20,11 @@ df_ref = pd.read_excel(edgDataDictionaryReference)
 df_current = pd.read_excel(edgDataDictionaryCurrent)
 df_backend = pd.read_excel(package_backend_path, sheet_name='Rename', header=None, names=['Old', 'New'])
 
+# Drop specified columns
+drop_columns = ['LastModifiedOn', 'Domain', 'Community', 'Asset Type']
+df_ref.drop(columns=[col for col in drop_columns if col in df_ref.columns], inplace=True)
+df_current.drop(columns=[col for col in drop_columns if col in df_current.columns], inplace=True)
+
 # Rename columns based on backend mapping
 rename_dict = dict(zip(df_backend['Old'], df_backend['New']))
 df_ref.rename(columns=rename_dict, inplace=True)
@@ -51,7 +56,7 @@ def generate_tool_comment(row):
             changes.append(f"Removed: {col} was {ref_value}")
         elif ref_value != cur_value:
             changes.append(f"Updated: {col} changed from {ref_value} to {cur_value}")
-    return '; '.join(changes) if changes else 'No Changes'
+    return '; '.join(changes) if changes else ''
 
 df_merged['Tool Comments'] = df_merged.apply(generate_tool_comment, axis=1)
 
@@ -71,7 +76,13 @@ print("Generating text report...")
 report_lines = ["EDG Data Dictionary Difference Report", "===================================\n"]
 for change_type, group in df_merged.groupby('Change Type'):
     report_lines.append(f"{change_type} ({len(group)} records):")
-    report_lines.extend([f"- {row[key_col]}: {row['Tool Comments']}" for _, row in group.iterrows()])
+    if change_type == 'New Attribute':
+        report_lines.extend([f"- {row[key_col]}: {row[rename_dict.get('Name', 'Name')]}" for _, row in group.iterrows()])
+    elif change_type == 'Modified Attribute':
+        modified_records = [f"- {row[key_col]}: {row['Tool Comments']}" for _, row in group.iterrows() if row['Tool Comments']]
+        report_lines.extend(modified_records)
+    else:
+        report_lines.extend([f"- {row[key_col]}" for _, row in group.iterrows()])
     report_lines.append("\n")
 
 with open(output_text_file, 'w') as f:
