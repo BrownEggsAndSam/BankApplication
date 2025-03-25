@@ -26,6 +26,15 @@ df_ref.rename(columns=rename_dict, inplace=True)
 df_current.rename(columns=rename_dict, inplace=True)
 
 key_col = rename_dict.get('Attribute Registry ID', 'Attribute Registry ID')
+classify_col = rename_dict.get('[Asset] is classified by [Business Dimension] > Name', '[Asset] is classified by [Business Dimension] > Name')
+system_record_col = rename_dict.get('[Business Term] system of record [Technology Asset] > Name', '[Business Term] system of record [Technology Asset] > Name')
+
+# Consolidate duplicate Attribute Registry IDs
+def consolidate_duplicates(df):
+    return df.groupby(key_col).agg(lambda x: '; '.join(sorted(set(x.dropna())))).reset_index()
+
+df_ref = consolidate_duplicates(df_ref)
+df_current = consolidate_duplicates(df_current)
 
 print("Merging datasets to identify differences...")
 df_merged = df_ref.merge(df_current, on=key_col, how='outer', suffixes=('_Ref', '_Current'), indicator=True)
