@@ -46,9 +46,11 @@ def read_edg_file(filepath):
     Reads an EDG Excel file and returns a standardized DataFrame.
     Checks if a 'Data Glossary' sheet exists. If not, uses alternative expected columns.
     Consolidates duplicate Attribute Registry IDs if needed.
+    Also strips trailing/leading spaces from column names and string values.
     """
     try:
         xls = pd.ExcelFile(filepath)
+        # If 'Data Glossary' exists, use that sheet
         if 'Data Glossary' in xls.sheet_names:
             df = pd.read_excel(xls, 'Data Glossary')
             required_cols = ['Attribute Name', 'Attribute Registry ID', 'Definition', 'Status', 
@@ -80,6 +82,12 @@ def read_edg_file(filepath):
                 'Authoritative Source': 'first',
                 'Status': 'first'
             })
+        # Strip trailing/leading spaces from column names
+        df.columns = df.columns.str.strip()
+        # Strip trailing/leading spaces from string values in the DataFrame
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+        # Apply renaming mapping if available
         mapping = load_rename_mapping()
         if mapping:
             df.rename(columns=mapping, inplace=True)
@@ -95,9 +103,7 @@ def compare_edg_data(ref_df, curr_df):
     For each record:
       - If no matching record is found in the reference, mark as a new attribute.
       - If a match exists, compare each field (except 'Attribute Registry ID').
-    A dictionary 'diff_details' is created for each row:
-      - If the record is new, diff_details['new'] is set to True.
-      - For common records, keys for each field with differences are added as a tuple (old, new).
+    All differences for a given attribute are consolidated into a single 'Tool Comments' string.
     """
     merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
                            suffixes=('_curr', '_ref'), indicator=True)
@@ -122,7 +128,7 @@ def compare_edg_data(ref_df, curr_df):
                         diff_details[col] = (val_ref, val_curr)
         diff_details_list.append(diff_details)
     merged_df['diff_details'] = diff_details_list
-    # Build a simple Tool Comments string for the Excel report
+    # Consolidate differences into a single Tool Comments string per row
     tool_comments = []
     for details in diff_details_list:
         comments = []
@@ -134,7 +140,7 @@ def compare_edg_data(ref_df, curr_df):
             comments.append(f"Difference in {key}: '{diff[0]}' -> '{diff[1]}'")
         tool_comments.append("; ".join(comments))
     merged_df['Tool Comments'] = tool_comments
-    # Only keep rows with differences
+    # Keep only rows with differences
     merged_df = merged_df[merged_df['Tool Comments'] != ""]
     return merged_df
 
@@ -142,22 +148,21 @@ def save_reports(merged_df, ref_file_name, curr_file_name):
     """
     Saves an Excel report and a grouped text report.
     
+    The Excel report is the merged DataFrame (one record per attribute with consolidated changes).
     The text report is organized into sections:
-      - New Attributes:
-          Lists each new attribute with "Attribute Registry ID - Attribute Name".
+      - For new attributes, it lists each attribute (with ID and name).
       - For each field with differences, a section is created with header:
           "Difference IN <Field>"
-        Under each header, each line is:
+        Under each header, each line shows:
           "Attr Registry ID - Changed from 'old' to 'new'"
     """
     try:
         output_excel, output_txt = get_output_filenames()
-        # Save the Excel report (all records are saved)
+        # Save the Excel report
         merged_df.to_excel(output_excel, index=False)
         
-        # Prepare groups for the text report
         new_attributes = []
-        differences_by_field = {}  # key: field name, value: list of difference lines
+        differences_by_field = {}  # key: field name, value: list of lines
         
         for idx, row in merged_df.iterrows():
             diff = row['diff_details']
@@ -169,7 +174,6 @@ def save_reports(merged_df, ref_file_name, curr_file_name):
             for key in diff:
                 if key == 'new':
                     continue
-                # Create a line for this field
                 old_val, new_val = diff[key]
                 line = f"{attr_id} - Changed from '{old_val}' to '{new_val}'"
                 if key not in differences_by_field:
