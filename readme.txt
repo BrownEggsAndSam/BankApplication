@@ -87,50 +87,35 @@ def read_edg_file(filepath):
     except Exception as e:
         raise ValueError(f"Error reading EDG file {filepath}: {e}")
 
-def compare_edg_data(ref_df, curr_df, full_comparison=True):
+def compare_edg_data(ref_df, curr_df):
     """
-    Compare two EDG DataFrames using 'Attribute Registry ID' as the key.
+    Compare EDG_Current (curr_df) to EDG_Reference (ref_df) using 'Attribute Registry ID' as the key.
     
-    For Full Comparison:
-      - Performs an outer merge between the reference and current files.
-      - Identifies new attributes (present only in current) and deleted attributes (present only in reference).
-      - Also compares common attributes field-by-field.
-    
-    Without Full Comparison:
-      - Only attributes present in the current file are considered (ignoring new/deleted).
-      - Field-by-field differences are reported.
-    
-    Each row gets a 'diff_details' dictionary:
-      - 'new': True if the attribute is new.
-      - 'deleted': True if the attribute is missing in current (only when full_comparison is True).
-      - For common attributes, keys for each field with differences (tuple: (old, new)).
+    Performs a left merge so that only records present in the current file are considered.
+    For each record:
+      - If no matching record is found in the reference, mark as a new attribute.
+      - If a match exists, compare each field (except 'Attribute Registry ID').
+    A dictionary 'diff_details' is created for each row:
+      - If the record is new, diff_details['new'] is set to True.
+      - For common records, keys for each field with differences are added as a tuple (old, new).
     """
-    if full_comparison:
-        merged_df = pd.merge(ref_df, curr_df, on='Attribute Registry ID', how='outer', 
-                               suffixes=('_ref', '_curr'), indicator=True)
-    else:
-        merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
-                               suffixes=('_curr', '_ref'), indicator=True)
+    merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
+                           suffixes=('_curr', '_ref'), indicator=True)
     diff_details_list = []
     for idx, row in merged_df.iterrows():
         diff_details = {}
-        if full_comparison:
-            if row['_merge'] == 'left_only':
-                diff_details['deleted'] = True
-            elif row['_merge'] == 'right_only':
-                diff_details['new'] = True
+        if row['_merge'] == 'left_only':
+            diff_details['new'] = True
         else:
-            if row['_merge'] == 'left_only':
-                diff_details['new'] = True
-        if row['_merge'] == 'both':
-            for col in ref_df.columns:
+            for col in curr_df.columns:
                 if col == 'Attribute Registry ID':
                     continue
-                col_ref = f"{col}_ref"
                 col_curr = f"{col}_curr"
-                if col_ref in merged_df.columns and col_curr in merged_df.columns:
-                    val_ref = row[col_ref]
+                col_ref = f"{col}_ref"
+                if col_curr in merged_df.columns and col_ref in merged_df.columns:
                     val_curr = row[col_curr]
+                    val_ref = row[col_ref]
+                    # Skip if both are missing or equal
                     if pd.isnull(val_ref) and pd.isnull(val_curr):
                         continue
                     if val_ref != val_curr:
@@ -143,39 +128,36 @@ def compare_edg_data(ref_df, curr_df, full_comparison=True):
         comments = []
         if details.get('new'):
             comments.append("New attribute added")
-        if details.get('deleted'):
-            comments.append("Attribute deleted")
         for key, diff in details.items():
-            if key in ['new', 'deleted']:
+            if key == 'new':
                 continue
             comments.append(f"Difference in {key}: '{diff[0]}' -> '{diff[1]}'")
         tool_comments.append("; ".join(comments))
     merged_df['Tool Comments'] = tool_comments
-    if not full_comparison:
-        merged_df = merged_df[merged_df['Tool Comments'] != ""]
+    # Only keep rows with differences
+    merged_df = merged_df[merged_df['Tool Comments'] != ""]
     return merged_df
 
-def save_reports(merged_df, ref_file_name, curr_file_name, full_comparison=True):
+def save_reports(merged_df, ref_file_name, curr_file_name):
     """
     Saves an Excel report and a grouped text report.
     
     The text report is organized into sections:
       - New Attributes:
           Lists each new attribute with "Attribute Registry ID - Attribute Name".
-      - (If full comparison is enabled) Deleted Attributes:
-          Lists each deleted attribute similarly.
-      - Difference In <Field>:
-          For each field that shows differences, lists all attribute IDs that have changes.
+      - For each field with differences, a section is created with header:
+          "Difference IN <Field>"
+        Under each header, each line is:
+          "Attr Registry ID - Changed from 'old' to 'new'"
     """
     try:
         output_excel, output_txt = get_output_filenames()
-        # Save Excel report (all records are saved)
+        # Save the Excel report (all records are saved)
         merged_df.to_excel(output_excel, index=False)
         
-        # Build groups for text report
+        # Prepare groups for the text report
         new_attributes = []
-        deleted_attributes = []
-        differences_by_field = {}  # key: field name, value: list of attribute IDs
+        differences_by_field = {}  # key: field name, value: list of difference lines
         
         for idx, row in merged_df.iterrows():
             diff = row['diff_details']
@@ -184,14 +166,15 @@ def save_reports(merged_df, ref_file_name, curr_file_name, full_comparison=True)
             attr_name = row.get('Attribute Name', row.get('Name', ''))
             if diff.get('new'):
                 new_attributes.append(f"{attr_id} - {attr_name}")
-            if full_comparison and diff.get('deleted'):
-                deleted_attributes.append(f"{attr_id} - {attr_name}")
             for key in diff:
-                if key in ['new', 'deleted']:
+                if key == 'new':
                     continue
+                # Create a line for this field
+                old_val, new_val = diff[key]
+                line = f"{attr_id} - Changed from '{old_val}' to '{new_val}'"
                 if key not in differences_by_field:
                     differences_by_field[key] = []
-                differences_by_field[key].append(str(attr_id))
+                differences_by_field[key].append(line)
         
         report_lines = []
         header = f"EDG Comparison Report\nInput Files: {ref_file_name} | {curr_file_name}\n{'='*40}\n"
@@ -203,16 +186,10 @@ def save_reports(merged_df, ref_file_name, curr_file_name, full_comparison=True)
                 report_lines.append("  " + item)
             report_lines.append("")
         
-        if full_comparison and deleted_attributes:
-            report_lines.append("Deleted Attributes:")
-            for item in deleted_attributes:
-                report_lines.append("  " + item)
-            report_lines.append("")
-        
-        for field, attr_ids in differences_by_field.items():
-            report_lines.append(f"Difference In {field}:")
-            unique_ids = sorted(set(attr_ids))
-            report_lines.append("  " + ", ".join(unique_ids))
+        for field, lines in differences_by_field.items():
+            report_lines.append(f"Difference IN {field}:")
+            for line in lines:
+                report_lines.append("  " + line)
             report_lines.append("")
         
         with open(output_txt, 'w') as f:
@@ -243,11 +220,6 @@ class EDGComparisonApp(tk.Tk):
         self.curr_entry = tk.Entry(self, width=80)
         self.curr_entry.pack(pady=5)
         tk.Button(self, text="Browse", command=self.browse_curr_file).pack(pady=5)
-        
-        # Full comparison option with explanation
-        self.full_compare_var = tk.BooleanVar()
-        tk.Checkbutton(self, text="Full EDG Comparison", variable=self.full_compare_var).pack(pady=5)
-        tk.Label(self, text="(Full Comparison compares both files to detect new and deleted attributes in addition to field differences.)", font=("Arial", 8)).pack(pady=2)
         
         # Status label and detailed status text area
         self.status_label = tk.Label(self, text="Status: Waiting for input")
@@ -304,12 +276,11 @@ class EDGComparisonApp(tk.Tk):
             self.log_status(f"EDG Current file read successfully. Records: {len(curr_df)}")
             
             self.log_status("Comparing files...")
-            merged_df = compare_edg_data(ref_df, curr_df, full_comparison=self.full_compare_var.get())
-            self.log_status(f"Comparison complete. Records in result: {len(merged_df)}")
+            merged_df = compare_edg_data(ref_df, curr_df)
+            self.log_status(f"Comparison complete. Records with differences: {len(merged_df)}")
             
             self.log_status("Saving reports...")
-            output_excel, output_txt = save_reports(merged_df, ref_file_name, curr_file_name,
-                                                      full_comparison=self.full_compare_var.get())
+            output_excel, output_txt = save_reports(merged_df, ref_file_name, curr_file_name)
             self.log_status(f"Reports saved successfully:\nExcel: {output_excel}\nText: {output_txt}")
             self.status_label.config(text=f"Status: Completed. Output saved to {output_excel}")
             messagebox.showinfo("Success", "Comparison completed successfully!")
