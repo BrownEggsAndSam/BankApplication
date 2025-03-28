@@ -3,235 +3,224 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-# -------------------------
-# Global paths & constants
-# -------------------------
-package_backend_path = './__glossaryDifferenceScript/backend/backend.xlsx'
-package_input_path = './__glossaryDifferenceScript/input/'
-package_output_path = './__glossaryDifferenceScript/output/'
+# --------------------------
+# Backend file paths
+# --------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+package_backend_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'backend', 'backend.xlsx')
+package_input_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'input')
+package_output_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'output')
 output_file = os.path.join(package_output_path, 'EDG_Difference.xlsx')
-report_txt_file = os.path.join(package_output_path, 'EDG_Difference_Report.txt')
 
-# -------------------------
-# Function: Load Rename Mapping
-# -------------------------
+# --------------------------
+# Helper Functions
+# --------------------------
 def load_rename_mapping():
+    """
+    Load the rename mapping from the backend.xlsx file.
+    Expected to have two columns: Column A (original) and Column B (new name).
+    """
+    if not os.path.exists(package_backend_path):
+        print(f"Warning: Rename mapping file not found at {package_backend_path}. Continuing without renaming.")
+        return {}
     try:
         rename_df = pd.read_excel(package_backend_path, sheet_name='Rename')
-        # Assume Column A: original field, Column B: new field name
-        rename_mapping = dict(zip(rename_df.iloc[:, 0], rename_df.iloc[:, 1]))
-        return rename_mapping
+        mapping = dict(zip(rename_df.iloc[:, 0], rename_df.iloc[:, 1]))
+        return mapping
     except Exception as e:
-        print(f"Error loading rename mapping: {e}")
+        print("Error loading rename mapping:", e)
         return {}
 
-# -------------------------
-# Function: Load an EDG Excel file
-# -------------------------
-def load_edg_file(filepath):
+def read_edg_file(filepath):
+    """
+    Reads an EDG Excel file and returns a standardized DataFrame.
+    Checks if a 'Data Glossary' sheet exists. If not, looks for alternative expected columns.
+    Also consolidates duplicate Attribute Registry IDs.
+    """
     try:
         xls = pd.ExcelFile(filepath)
         if 'Data Glossary' in xls.sheet_names:
-            # For files with a 'Data Glossary' sheet:
-            df = pd.read_excel(xls, sheet_name='Data Glossary')
-            expected_cols = ['Attribute Name', 'Attribute Registry ID', 'Definition', 'Status', 
+            # Use the Data Glossary sheet and specific columns
+            df = pd.read_excel(xls, 'Data Glossary')
+            required_cols = ['Attribute Name', 'Attribute Registry ID', 'Definition', 'Status', 
                              'Business Segment', 'KDE', 'Privacy Designation', 'Authoritative Source', 'Domain']
-            # Select only columns that exist
-            df = df[[col for col in expected_cols if col in df.columns]]
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                raise ValueError(f"Missing columns in 'Data Glossary' sheet: {', '.join(missing_cols)}")
+            df = df[required_cols]
         else:
-            # For alternative formats, read the first sheet and search for expected fields
-            df = pd.read_excel(filepath)
-            # Map the expected field names to actual columns found (using case-insensitive search)
-            alternative_fields = {
-                'Attribute Registry ID': None,
-                'Name': None,
-                'Definition': None,
-                '[Asset] is classified by [Business Dimension] > Name': None,
-                '[Business Term] system of record [Technology Asset] > Name': None,
-                'KDE': None,
-                'Privacy Designation': None,
-                'Authoritative Source': None,
-                'Status': None
-            }
-            selected_cols = {}
-            for field in alternative_fields.keys():
-                for col in df.columns:
-                    if field.lower() in col.lower():
-                        selected_cols[field] = col
-                        break
-            if not selected_cols:
-                raise ValueError("The file format is not recognized.")
-            # Subset and then rename columns to standard names
-            df = df[list(selected_cols.values())]
-            rename_cols = {v: k for k, v in selected_cols.items()}
-            df.rename(columns=rename_cols, inplace=True)
+            # Alternative format: search for expected columns in the first sheet
+            df = pd.read_excel(xls, xls.sheet_names[0])
+            alt_cols = ['Attribute Registry ID', 'Name', 'Definition', 
+                        '[Asset] is classified by [Business Dimension] > Name', 
+                        '[Business Term] system of record [Technology Asset] > Name',
+                        'KDE', 'Privacy Designation', 'Authoritative Source', 'Status']
+            # Check if key column exists
+            if 'Attribute Registry ID' not in df.columns:
+                raise ValueError("EDG file missing key column 'Attribute Registry ID'")
+            # Add any missing columns with empty values
+            for col in alt_cols:
+                if col not in df.columns:
+                    df[col] = None
+            df = df[alt_cols]
+            # Consolidate duplicate records based on 'Attribute Registry ID'
+            df = df.groupby('Attribute Registry ID', as_index=False).agg({
+                'Name': 'first',
+                'Definition': 'first',
+                '[Asset] is classified by [Business Dimension] > Name': lambda x: ', '.join(sorted(set(str(i) for i in x if pd.notnull(i)))),
+                '[Business Term] system of record [Technology Asset] > Name': lambda x: ', '.join(sorted(set(str(i) for i in x if pd.notnull(i)))),
+                'KDE': 'first',
+                'Privacy Designation': 'first',
+                'Authoritative Source': 'first',
+                'Status': 'first'
+            })
+        # Apply renaming if a mapping exists
+        mapping = load_rename_mapping()
+        if mapping:
+            df.rename(columns=mapping, inplace=True)
         return df
     except Exception as e:
-        raise ValueError(f"Error loading file {filepath}: {e}")
+        raise ValueError(f"Error reading EDG file {filepath}: {e}")
 
-# -------------------------
-# Function: Consolidate duplicate records
-# -------------------------
-def consolidate_duplicates(df):
-    # Example consolidation for the two columns that might be duplicated.
-    asset_col = '[Asset] is classified by [Business Dimension] > Name'
-    tech_col = '[Business Term] system of record [Technology Asset] > Name'
-    if asset_col in df.columns and tech_col in df.columns:
-        def consolidate_group(group):
-            # Consolidate values for the asset/tech columns by combining unique non-null entries
-            asset_vals = group[asset_col].dropna().unique().tolist()
-            tech_vals = group[tech_col].dropna().unique().tolist()
-            combined = list(set(asset_vals + tech_vals))
-            consolidated_value = ", ".join(combined)
-            # For simplicity, take the first value for other columns
-            row = group.iloc[0]
-            row[asset_col] = consolidated_value
-            row[tech_col] = consolidated_value
-            return row
-        df = df.groupby('Attribute Registry ID', as_index=False).apply(consolidate_group)
-        # After groupby+apply, the index might be non-sequential; reset if needed.
-        df.reset_index(drop=True, inplace=True)
-    return df
-
-# -------------------------
-# Function: Compare the two EDG DataFrames
-# -------------------------
-def compare_dataframes(df_ref, df_current):
-    # Compare on 'Attribute Registry ID'
-    common_cols = list(set(df_ref.columns).intersection(set(df_current.columns)))
-    if 'Attribute Registry ID' in common_cols:
-        common_cols.remove('Attribute Registry ID')
+def compare_edg_data(ref_df, curr_df, full_comparison=True):
+    """
+    Compare two EDG DataFrames using 'Attribute Registry ID' as the key.
+    If full_comparison is True, report new and deleted attributes.
+    Also creates a 'Tool Comments' field summarizing differences.
+    """
+    if full_comparison:
+        merged_df = pd.merge(ref_df, curr_df, on='Attribute Registry ID', how='outer', 
+                             suffixes=('_ref', '_curr'), indicator=True)
+    else:
+        merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
+                             suffixes=('_curr', '_ref'), indicator=True)
     
-    # Merge the two dataframes to detect differences, new, and deleted records
-    merged = pd.merge(df_ref, df_current, on='Attribute Registry ID', how='outer',
-                      suffixes=('_ref', '_current'), indicator=True)
+    tool_comments = []
     
-    differences = []
-    for _, row in merged.iterrows():
-        attr_id = row['Attribute Registry ID']
-        diff_comment = []
+    for idx, row in merged_df.iterrows():
+        comments = []
+        if full_comparison:
+            if row['_merge'] == 'left_only':
+                comments.append("Attribute deleted")
+            elif row['_merge'] == 'right_only':
+                comments.append("New attribute added")
         if row['_merge'] == 'both':
-            for col in common_cols:
-                ref_val = row.get(f"{col}_ref")
-                curr_val = row.get(f"{col}_current")
-                # Compare values (treating NaN as equal)
-                if pd.isna(ref_val) and pd.isna(curr_val):
+            # Compare each column in the reference DataFrame (skip the key)
+            for col in ref_df.columns:
+                if col == 'Attribute Registry ID':
                     continue
-                if (pd.isna(ref_val) and not pd.isna(curr_val)) or (not pd.isna(ref_val) and pd.isna(curr_val)) or str(ref_val) != str(curr_val):
-                    diff_comment.append(f"{col}: '{ref_val}' -> '{curr_val}'")
-            if diff_comment:
-                differences.append({
-                    'Attribute Registry ID': attr_id,
-                    'Tool Comments': "; ".join(diff_comment)
-                })
-        elif row['_merge'] == 'left_only':
-            differences.append({
-                'Attribute Registry ID': attr_id,
-                'Tool Comments': 'Attribute deleted in current version.'
-            })
-        elif row['_merge'] == 'right_only':
-            differences.append({
-                'Attribute Registry ID': attr_id,
-                'Tool Comments': 'New attribute added in current version.'
-            })
-    diff_df = pd.DataFrame(differences)
-    return merged, diff_df
+                col_ref = f"{col}_ref"
+                col_curr = f"{col}_curr"
+                if col_ref in merged_df.columns and col_curr in merged_df.columns:
+                    val_ref = row[col_ref]
+                    val_curr = row[col_curr]
+                    if pd.isnull(val_ref) and pd.isnull(val_curr):
+                        continue
+                    if val_ref != val_curr:
+                        comments.append(f"Difference in {col}: '{val_ref}' -> '{val_curr}'")
+        tool_comments.append("; ".join(comments))
+    
+    merged_df['Tool Comments'] = tool_comments
+    return merged_df
 
-# -------------------------
-# Main processing function
-# -------------------------
-def process_files(edg_ref_file, edg_current_file):
-    # Load the rename mapping
-    rename_mapping = load_rename_mapping()
-    
+def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, curr_file_name):
+    """
+    Saves the merged dataframe to an Excel file and writes a text report.
+    """
     try:
-        df_ref = load_edg_file(edg_ref_file)
-        df_current = load_edg_file(edg_current_file)
-    except ValueError as e:
-        return str(e)
-    
-    # Apply rename mapping if applicable
-    if rename_mapping:
-        df_ref.rename(columns=rename_mapping, inplace=True)
-        df_current.rename(columns=rename_mapping, inplace=True)
-    
-    # Consolidate duplicates if necessary
-    df_ref = consolidate_duplicates(df_ref)
-    df_current = consolidate_duplicates(df_current)
-    
-    # Compare the two dataframes
-    merged_df, diff_df = compare_dataframes(df_ref, df_current)
-    
-    # Save the Excel difference report and write a text summary report
-    try:
-        diff_df.to_excel(output_file, index=False)
-        with open(report_txt_file, 'w') as f:
-            f.write("EDG Difference Report\n")
-            f.write(f"Reference file: {edg_ref_file}\n")
-            f.write(f"Current file: {edg_current_file}\n")
-            f.write(f"Output file: {output_file}\n\n")
-            f.write(f"Total differences: {len(diff_df)}\n")
-            for _, row in diff_df.iterrows():
-                f.write(f"Attribute Registry ID: {row['Attribute Registry ID']} - {row['Tool Comments']}\n")
-        return "Processing completed successfully."
+        merged_df.to_excel(output_excel_path, index=False)
+        with open(output_txt_path, 'w') as f:
+            header = f"EDG Comparison Report\nInput Files: {ref_file_name} | {curr_file_name}\n{'='*40}\n"
+            f.write(header)
+            for idx, row in merged_df.iterrows():
+                f.write(f"Attribute Registry ID: {row['Attribute Registry ID']}\n")
+                f.write("Comments: " + str(row['Tool Comments']) + "\n")
+                f.write("-" * 40 + "\n")
     except Exception as e:
-        return f"Error saving output: {e}"
+        raise ValueError("Error saving reports: " + str(e))
 
-# -------------------------
-# Tkinter GUI for user interaction
-# -------------------------
-def run_gui():
-    root = tk.Tk()
-    root.title("EDG Difference Reporter")
+# --------------------------
+# Tkinter GUI
+# --------------------------
+class EDGComparisonApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("EDG Comparison Tool")
+        self.geometry("600x300")
+        
+        self.ref_file = None
+        self.curr_file = None
+        
+        tk.Label(self, text="EDG Reference File:").pack(pady=5)
+        self.ref_entry = tk.Entry(self, width=50)
+        self.ref_entry.pack(pady=5)
+        tk.Button(self, text="Browse", command=self.browse_ref_file).pack(pady=5)
+        
+        tk.Label(self, text="EDG Current File:").pack(pady=5)
+        self.curr_entry = tk.Entry(self, width=50)
+        self.curr_entry.pack(pady=5)
+        tk.Button(self, text="Browse", command=self.browse_curr_file).pack(pady=5)
+        
+        self.full_compare_var = tk.BooleanVar()
+        tk.Checkbutton(self, text="Full EDG Comparison", variable=self.full_compare_var).pack(pady=5)
+        
+        self.status_label = tk.Label(self, text="Status: Waiting for input")
+        self.status_label.pack(pady=5)
+        
+        tk.Button(self, text="Run Comparison", command=self.run_comparison).pack(pady=10)
     
-    edg_ref_file = tk.StringVar()
-    edg_current_file = tk.StringVar()
-    status_text = tk.StringVar()
-    
-    def browse_ref_file():
-        filename = filedialog.askopenfilename(
+    def browse_ref_file(self):
+        file_path = filedialog.askopenfilename(
             initialdir=package_input_path,
-            title="Select Reference EDG File",
-            filetypes=[("Excel Files", "*.xlsx *.xls")]
+            title="Select EDG Reference File",
+            filetypes=(("Excel files", "*.xlsx *.xls"), ("All files", "*.*"))
         )
-        edg_ref_file.set(filename)
+        if file_path:
+            self.ref_file = file_path
+            self.ref_entry.delete(0, tk.END)
+            self.ref_entry.insert(0, file_path)
     
-    def browse_current_file():
-        filename = filedialog.askopenfilename(
+    def browse_curr_file(self):
+        file_path = filedialog.askopenfilename(
             initialdir=package_input_path,
-            title="Select Current EDG File",
-            filetypes=[("Excel Files", "*.xlsx *.xls")]
+            title="Select EDG Current File",
+            filetypes=(("Excel files", "*.xlsx *.xls"), ("All files", "*.*"))
         )
-        edg_current_file.set(filename)
+        if file_path:
+            self.curr_file = file_path
+            self.curr_entry.delete(0, tk.END)
+            self.curr_entry.insert(0, file_path)
     
-    def process():
-        ref = edg_ref_file.get()
-        curr = edg_current_file.get()
-        if not ref or not curr:
-            messagebox.showerror("Error", "Please select both the reference and current EDG files.")
+    def run_comparison(self):
+        if not self.ref_file or not self.curr_file:
+            messagebox.showerror("Input Error", "Please select both EDG Reference and Current files.")
             return
-        status_text.set("Processing...")
-        root.update_idletasks()
-        result = process_files(ref, curr)
-        status_text.set(result)
-        messagebox.showinfo("Processing Result", result)
-    
-    # Layout the GUI elements
-    tk.Label(root, text="Reference EDG File:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
-    tk.Entry(root, textvariable=edg_ref_file, width=50).grid(row=0, column=1, padx=5, pady=5)
-    tk.Button(root, text="Browse", command=browse_ref_file).grid(row=0, column=2, padx=5, pady=5)
-    
-    tk.Label(root, text="Current EDG File:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
-    tk.Entry(root, textvariable=edg_current_file, width=50).grid(row=1, column=1, padx=5, pady=5)
-    tk.Button(root, text="Browse", command=browse_current_file).grid(row=1, column=2, padx=5, pady=5)
-    
-    tk.Button(root, text="Process", command=process).grid(row=2, column=1, pady=10)
-    tk.Label(root, textvariable=status_text).grid(row=3, column=0, columnspan=3, pady=5)
-    
-    root.mainloop()
+        
+        try:
+            self.status_label.config(text="Status: Processing...")
+            self.update_idletasks()
+            
+            ref_file_name = os.path.basename(self.ref_file)
+            curr_file_name = os.path.basename(self.curr_file)
+            
+            ref_df = read_edg_file(self.ref_file)
+            curr_df = read_edg_file(self.curr_file)
+            
+            merged_df = compare_edg_data(ref_df, curr_df, full_comparison=self.full_compare_var.get())
+            
+            output_excel = os.path.join(package_output_path, "EDG_Difference.xlsx")
+            output_txt = os.path.join(package_output_path, "EDG_Difference.txt")
+            
+            save_reports(merged_df, output_excel, output_txt, ref_file_name, curr_file_name)
+            self.status_label.config(text=f"Status: Completed. Output saved to {output_excel}")
+            messagebox.showinfo("Success", "Comparison completed successfully!")
+        except Exception as e:
+            self.status_label.config(text="Status: Error encountered.")
+            messagebox.showerror("Error", str(e))
 
-# -------------------------
-# Entry point
-# -------------------------
-if __name__ == "__main__":
-    run_gui()
+# --------------------------
+# Main execution
+# --------------------------
+if __name__ == '__main__':
+    app = EDGComparisonApp()
+    app.mainloop()
