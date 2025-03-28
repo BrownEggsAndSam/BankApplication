@@ -155,11 +155,13 @@ def save_reports(merged_df, ref_file_name, curr_file_name):
           "Difference IN <Field>"
         Under each header, each line shows:
           "Attr Registry ID - Changed from 'old' to 'new'"
+    Internal columns (_merge, diff_details) are dropped from the Excel output.
     """
     try:
         output_excel, output_txt = get_output_filenames()
-        # Save the Excel report
-        merged_df.to_excel(output_excel, index=False)
+        # Prepare Excel report by dropping internal columns
+        excel_df = merged_df.drop(columns=['_merge', 'diff_details'], errors='ignore')
+        excel_df.to_excel(output_excel, index=False)
         
         new_attributes = []
         differences_by_field = {}  # key: field name, value: list of lines
