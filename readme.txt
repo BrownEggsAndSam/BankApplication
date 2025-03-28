@@ -81,29 +81,38 @@ def read_edg_file(filepath):
 def compare_edg_data(ref_df, curr_df, full_comparison=True):
     """
     Compare two EDG DataFrames using 'Attribute Registry ID' as the key.
-    - For full comparison: performs an outer merge to report new attributes and deletions.
-    - Otherwise: only records in EDG_Current (left merge) are considered.
-    Creates a 'Tool Comments' column with a summary of changes.
+    
+    For Full Comparison:
+      - Performs an outer merge between the reference and current files.
+      - Identifies new attributes (present only in current) and deleted attributes (present only in reference).
+      - Also compares common attributes field-by-field.
+    
+    Without Full Comparison:
+      - Only attributes present in the current file are considered (ignoring new/deleted).
+      - Field-by-field differences are reported.
+    
+    The function creates a 'diff_details' dictionary for each row containing:
+      - 'new': True if the attribute is new.
+      - 'deleted': True if the attribute is missing in current (only when full_comparison is True).
+      - For common attributes, keys for each field with differences (value is a tuple: (old, new)).
     """
     if full_comparison:
         merged_df = pd.merge(ref_df, curr_df, on='Attribute Registry ID', how='outer', 
-                             suffixes=('_ref', '_curr'), indicator=True)
+                               suffixes=('_ref', '_curr'), indicator=True)
     else:
         merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
-                             suffixes=('_curr', '_ref'), indicator=True)
-    tool_comments = []
+                               suffixes=('_curr', '_ref'), indicator=True)
+    diff_details_list = []
     for idx, row in merged_df.iterrows():
-        comments = []
-        # Mark new or deleted attributes based on merge indicator
+        diff_details = {}
         if full_comparison:
             if row['_merge'] == 'left_only':
-                comments.append("Attribute deleted")
+                diff_details['deleted'] = True
             elif row['_merge'] == 'right_only':
-                comments.append("New attribute added")
+                diff_details['new'] = True
         else:
             if row['_merge'] == 'left_only':
-                comments.append("New attribute added")
-        # For records present in both, compare column values
+                diff_details['new'] = True
         if row['_merge'] == 'both':
             for col in ref_df.columns:
                 if col == 'Attribute Registry ID':
@@ -116,10 +125,23 @@ def compare_edg_data(ref_df, curr_df, full_comparison=True):
                     if pd.isnull(val_ref) and pd.isnull(val_curr):
                         continue
                     if val_ref != val_curr:
-                        comments.append(f"Difference in {col}: '{val_ref}' -> '{val_curr}'")
+                        diff_details[col] = (val_ref, val_curr)
+        diff_details_list.append(diff_details)
+    merged_df['diff_details'] = diff_details_list
+    # Build a simple Tool Comments string for the Excel report
+    tool_comments = []
+    for details in diff_details_list:
+        comments = []
+        if details.get('new'):
+            comments.append("New attribute added")
+        if details.get('deleted'):
+            comments.append("Attribute deleted")
+        for key, diff in details.items():
+            if key in ['new', 'deleted']:
+                continue
+            comments.append(f"Difference in {key}: '{diff[0]}' -> '{diff[1]}'")
         tool_comments.append("; ".join(comments))
     merged_df['Tool Comments'] = tool_comments
-    # If not full comparison, only keep records with changes (from EDG_Current)
     if not full_comparison:
         merged_df = merged_df[merged_df['Tool Comments'] != ""]
     return merged_df
@@ -127,54 +149,67 @@ def compare_edg_data(ref_df, curr_df, full_comparison=True):
 def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, curr_file_name, full_comparison=True):
     """
     Saves an Excel report and a grouped text report.
-    In the text report, only records with changes are included and grouped by type:
-    New, Modified, and Deleted Attributes.
+    
+    The text report is organized into sections:
+      - New Attributes:
+          Lists each new attribute with "Attribute Registry ID - Attribute Name".
+      - (If full comparison is enabled) Deleted Attributes:
+          Lists each deleted attribute similarly.
+      - Difference In <Field>:
+          For each field that shows differences, lists all attribute IDs that have changes.
     """
     try:
-        # Excel report:
-        # For full comparison, save all records; for current-only, save only changed records.
-        excel_df = merged_df.copy() if full_comparison else merged_df.copy()
-        excel_df.to_excel(output_excel_path, index=False)
+        # Save Excel report (all records are saved)
+        merged_df.to_excel(output_excel_path, index=False)
         
-        # Build the text report by grouping changes
-        new_attrs = []
-        modified_attrs = []
-        deleted_attrs = []
-        report_rows = merged_df[merged_df['Tool Comments'] != ""]
-        for idx, row in report_rows.iterrows():
-            comment = row['Tool Comments']
-            if "New attribute added" in comment:
-                new_attrs.append(row)
-            elif "Attribute deleted" in comment:
-                deleted_attrs.append(row)
-            elif "Difference in" in comment:
-                modified_attrs.append(row)
+        # Build groups for text report
+        new_attributes = []
+        deleted_attributes = []
+        differences_by_field = {}  # key: field name, value: list of attribute IDs
         
-        report_text = []
+        for idx, row in merged_df.iterrows():
+            diff = row['diff_details']
+            attr_id = row['Attribute Registry ID']
+            # Determine attribute name: prefer "Attribute Name" over "Name"
+            if 'Attribute Name' in row:
+                attr_name = row['Attribute Name']
+            else:
+                attr_name = row.get('Name', '')
+            if diff.get('new'):
+                new_attributes.append(f"{attr_id} - {attr_name}")
+            if full_comparison and diff.get('deleted'):
+                deleted_attributes.append(f"{attr_id} - {attr_name}")
+            for key in diff:
+                if key in ['new', 'deleted']:
+                    continue
+                if key not in differences_by_field:
+                    differences_by_field[key] = []
+                differences_by_field[key].append(str(attr_id))
+        
+        report_lines = []
         header = f"EDG Comparison Report\nInput Files: {ref_file_name} | {curr_file_name}\n{'='*40}\n"
-        report_text.append(header)
+        report_lines.append(header)
         
-        if new_attrs:
-            report_text.append("New Attributes:")
-            for row in new_attrs:
-                report_text.append(f"  Attribute Registry ID: {row['Attribute Registry ID']}")
-                report_text.append(f"    Comments: {row['Tool Comments']}")
-            report_text.append("")
-        if modified_attrs:
-            report_text.append("Modified Attributes:")
-            for row in modified_attrs:
-                report_text.append(f"  Attribute Registry ID: {row['Attribute Registry ID']}")
-                report_text.append(f"    Comments: {row['Tool Comments']}")
-            report_text.append("")
-        if full_comparison and deleted_attrs:
-            report_text.append("Deleted Attributes:")
-            for row in deleted_attrs:
-                report_text.append(f"  Attribute Registry ID: {row['Attribute Registry ID']}")
-                report_text.append(f"    Comments: {row['Tool Comments']}")
-            report_text.append("")
+        if new_attributes:
+            report_lines.append("New Attributes:")
+            for item in new_attributes:
+                report_lines.append("  " + item)
+            report_lines.append("")
+        
+        if full_comparison and deleted_attributes:
+            report_lines.append("Deleted Attributes:")
+            for item in deleted_attributes:
+                report_lines.append("  " + item)
+            report_lines.append("")
+        
+        for field, attr_ids in differences_by_field.items():
+            report_lines.append(f"Difference In {field}:")
+            unique_ids = sorted(set(attr_ids))
+            report_lines.append("  " + ", ".join(unique_ids))
+            report_lines.append("")
         
         with open(output_txt_path, 'w') as f:
-            f.write("\n".join(report_text))
+            f.write("\n".join(report_lines))
     except Exception as e:
         raise ValueError("Error saving reports: " + str(e))
 
@@ -185,30 +220,31 @@ class EDGComparisonApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("EDG Comparison Tool")
-        self.geometry("700x400")
+        self.geometry("750x450")
         
         self.ref_file = None
         self.curr_file = None
         
         # File selection widgets
         tk.Label(self, text="EDG Reference File:").pack(pady=5)
-        self.ref_entry = tk.Entry(self, width=70)
+        self.ref_entry = tk.Entry(self, width=80)
         self.ref_entry.pack(pady=5)
         tk.Button(self, text="Browse", command=self.browse_ref_file).pack(pady=5)
         
         tk.Label(self, text="EDG Current File:").pack(pady=5)
-        self.curr_entry = tk.Entry(self, width=70)
+        self.curr_entry = tk.Entry(self, width=80)
         self.curr_entry.pack(pady=5)
         tk.Button(self, text="Browse", command=self.browse_curr_file).pack(pady=5)
         
-        # Full comparison option
+        # Full comparison option with explanation
         self.full_compare_var = tk.BooleanVar()
         tk.Checkbutton(self, text="Full EDG Comparison", variable=self.full_compare_var).pack(pady=5)
+        tk.Label(self, text="(Full Comparison compares both files to detect new and deleted attributes in addition to field differences.)", font=("Arial", 8)).pack(pady=2)
         
         # Status label and detailed status text area
         self.status_label = tk.Label(self, text="Status: Waiting for input")
         self.status_label.pack(pady=5)
-        self.status_text = st.ScrolledText(self, height=10, width=80)
+        self.status_text = st.ScrolledText(self, height=10, width=90)
         self.status_text.pack(pady=5)
         
         tk.Button(self, text="Run Comparison", command=self.run_comparison).pack(pady=10)
