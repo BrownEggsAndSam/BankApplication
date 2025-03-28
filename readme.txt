@@ -3,15 +3,24 @@ import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import tkinter.scrolledtext as st
+from datetime import datetime
 
 # --------------------------
-# Backend file paths
+# Updated Backend File Paths
 # --------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-package_backend_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'backend', 'backend.xlsx')
-package_input_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'input')
-package_output_path = os.path.join(BASE_DIR, '__glossaryDifferenceScript', 'output')
-output_file = os.path.join(package_output_path, 'EDG_Difference.xlsx')
+package_backend_path = os.path.join(BASE_DIR, 'backend', 'backend.xlsx')
+package_input_path = os.path.join(BASE_DIR, 'input')
+package_output_path = os.path.join(BASE_DIR, 'output')
+
+def get_output_filenames():
+    """
+    Returns dynamic output filenames based on current timestamp.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_excel = os.path.join(package_output_path, f"EDG_Difference_{timestamp}.xlsx")
+    output_txt = os.path.join(package_output_path, f"EDG_Difference_{timestamp}.txt")
+    return output_excel, output_txt
 
 # --------------------------
 # Helper Functions
@@ -91,10 +100,10 @@ def compare_edg_data(ref_df, curr_df, full_comparison=True):
       - Only attributes present in the current file are considered (ignoring new/deleted).
       - Field-by-field differences are reported.
     
-    The function creates a 'diff_details' dictionary for each row containing:
+    Each row gets a 'diff_details' dictionary:
       - 'new': True if the attribute is new.
       - 'deleted': True if the attribute is missing in current (only when full_comparison is True).
-      - For common attributes, keys for each field with differences (value is a tuple: (old, new)).
+      - For common attributes, keys for each field with differences (tuple: (old, new)).
     """
     if full_comparison:
         merged_df = pd.merge(ref_df, curr_df, on='Attribute Registry ID', how='outer', 
@@ -146,7 +155,7 @@ def compare_edg_data(ref_df, curr_df, full_comparison=True):
         merged_df = merged_df[merged_df['Tool Comments'] != ""]
     return merged_df
 
-def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, curr_file_name, full_comparison=True):
+def save_reports(merged_df, ref_file_name, curr_file_name, full_comparison=True):
     """
     Saves an Excel report and a grouped text report.
     
@@ -159,8 +168,9 @@ def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, c
           For each field that shows differences, lists all attribute IDs that have changes.
     """
     try:
+        output_excel, output_txt = get_output_filenames()
         # Save Excel report (all records are saved)
-        merged_df.to_excel(output_excel_path, index=False)
+        merged_df.to_excel(output_excel, index=False)
         
         # Build groups for text report
         new_attributes = []
@@ -171,10 +181,7 @@ def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, c
             diff = row['diff_details']
             attr_id = row['Attribute Registry ID']
             # Determine attribute name: prefer "Attribute Name" over "Name"
-            if 'Attribute Name' in row:
-                attr_name = row['Attribute Name']
-            else:
-                attr_name = row.get('Name', '')
+            attr_name = row.get('Attribute Name', row.get('Name', ''))
             if diff.get('new'):
                 new_attributes.append(f"{attr_id} - {attr_name}")
             if full_comparison and diff.get('deleted'):
@@ -208,8 +215,9 @@ def save_reports(merged_df, output_excel_path, output_txt_path, ref_file_name, c
             report_lines.append("  " + ", ".join(unique_ids))
             report_lines.append("")
         
-        with open(output_txt_path, 'w') as f:
+        with open(output_txt, 'w') as f:
             f.write("\n".join(report_lines))
+        return output_excel, output_txt
     except Exception as e:
         raise ValueError("Error saving reports: " + str(e))
 
@@ -220,7 +228,7 @@ class EDGComparisonApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("EDG Comparison Tool")
-        self.geometry("750x450")
+        self.geometry("750x600")  # Updated window size
         
         self.ref_file = None
         self.curr_file = None
@@ -299,13 +307,10 @@ class EDGComparisonApp(tk.Tk):
             merged_df = compare_edg_data(ref_df, curr_df, full_comparison=self.full_compare_var.get())
             self.log_status(f"Comparison complete. Records in result: {len(merged_df)}")
             
-            output_excel = os.path.join(package_output_path, "EDG_Difference.xlsx")
-            output_txt = os.path.join(package_output_path, "EDG_Difference.txt")
-            
             self.log_status("Saving reports...")
-            save_reports(merged_df, output_excel, output_txt, ref_file_name, curr_file_name,
-                         full_comparison=self.full_compare_var.get())
-            self.log_status("Reports saved successfully.")
+            output_excel, output_txt = save_reports(merged_df, ref_file_name, curr_file_name,
+                                                      full_comparison=self.full_compare_var.get())
+            self.log_status(f"Reports saved successfully:\nExcel: {output_excel}\nText: {output_txt}")
             self.status_label.config(text=f"Status: Completed. Output saved to {output_excel}")
             messagebox.showinfo("Success", "Comparison completed successfully!")
         except Exception as e:
