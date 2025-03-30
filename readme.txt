@@ -1,303 +1,302 @@
-import os
 import pandas as pd
+from rapidfuzz import fuzz
+from itertools import combinations
+import os
+
+def group_similar_definitions(definitions, threshold=60, status_callback=None):
+    """
+    Group similar definitions using fuzzy matching.
+
+    :param definitions: List of definition strings.
+    :param threshold: Similarity threshold (0-100) for grouping definitions.
+    :param status_callback: Optional callback function to update status.
+    :return: List of grouped definition strings.
+    """
+    groups = {}
+    n = len(definitions)
+    if status_callback:
+        status_callback(f"Processing {n} definitions for grouping...")
+
+    # Compare every pair of definitions
+    for d1, d2 in combinations(definitions, 2):
+        score = fuzz.token_sort_ratio(d1, d2)
+        if score >= threshold:
+            if d1 in groups:
+                groups[d2] = groups[d1]
+            elif d2 in groups:
+                groups[d1] = groups[d2]
+            else:
+                groups[d1] = d1
+                groups[d2] = d1
+
+    # Preserve original order by mapping each definition to its group representative
+    grouped_list = [groups.get(d, d) for d in definitions]
+    return grouped_list
+
+def process_privacy_file(input_path, output_path, threshold=60, status_callback=None):
+    """
+    Process the EDG Data Dictionary to identify discrepancies in privacy designations.
+
+    :param input_path: Path to the input Excel file.
+    :param output_path: Path for saving the output Excel file.
+    :param threshold: Similarity threshold for fuzzy matching (0-100).
+    :param status_callback: Callback function to report status messages.
+    """
+    try:
+        if status_callback:
+            status_callback("Loading Excel file...")
+        # Load the Excel file
+        df = pd.read_excel(input_path)
+        
+        # Select relevant columns and drop duplicates
+        if status_callback:
+            status_callback("Selecting columns and removing duplicate records...")
+        key = df[['Attribute Registry ID', 'Name', 'Definition', 'Privacy Designation', 'CreatedOn']].drop_duplicates()
+        
+        # Group similar definitions using fuzzy matching
+        if status_callback:
+            status_callback("Grouping similar definitions...")
+        definitions = key['Definition'].tolist()
+        grouped_definitions = group_similar_definitions(definitions, threshold=threshold, status_callback=status_callback)
+        key['grouped_str'] = grouped_definitions
+        key['grouped_str'] = key['grouped_str'].str.lower().str.strip()
+        
+        # Count occurrences of each privacy designation per grouped string
+        if status_callback:
+            status_callback("Tabulating privacy designations per grouped definition...")
+        key_summary = key.groupby(['grouped_str', 'Privacy Designation']).size().unstack(fill_value=0)
+        
+        # Identify discrepancies where attributes have conflicting privacy designations
+        if status_callback:
+            status_callback("Identifying potential discrepancies...")
+        key_summary['potential_discrepancy'] = (
+            ((key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI', 0) > 0)) |
+            ((key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI In Combination - Personally Identifiable', 0) > 0)) |
+            ((key_summary.get('Not NPI', 0) > 0) & (key_summary.get('NPI In Combination - Not Publicly Available', 0) > 0))
+        )
+        
+        # Filter rows with discrepancies
+        potential_observation = key_summary[key_summary['potential_discrepancy']]
+        
+        # Merge discrepancy summary with the original attribute details
+        if status_callback:
+            status_callback("Merging discrepancy details with attribute data...")
+        potential_observation_ids = potential_observation.merge(key, on='grouped_str', how='left')
+        
+        # Reorder columns for better readability
+        columns = ['Attribute Registry ID', 'Name', 'Definition', 'Privacy Designation', 'CreatedOn', 'grouped_str',
+                   'Not NPI', 'NPI In Combination - Personally Identifiable', 'NPI In Combination - Not Publicly Available', 'NPI', 'potential_discrepancy']
+        potential_observation_ids = potential_observation_ids.reindex(columns=columns, fill_value=0)
+        
+        # Save the results to an Excel file
+        if status_callback:
+            status_callback("Saving results to Excel...")
+        potential_observation_ids.to_excel(output_path, index=False)
+        if status_callback:
+            status_callback(f"Process completed successfully. Output saved to: {output_path}")
+    except Exception as e:
+        if status_callback:
+            status_callback(f"Error occurred: {str(e)}")
+        else:
+            print(f"Error occurred: {str(e)}")
+
+
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import tkinter.scrolledtext as st
-from datetime import datetime
+import threading
+import os
+from privacy_audit import process_privacy_file
 
-# --------------------------
-# Updated Backend File Paths
-# --------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-package_backend_path = os.path.join(BASE_DIR, 'backend', 'backend.xlsx')
-package_input_path = os.path.join(BASE_DIR, 'input')
-package_output_path = os.path.join(BASE_DIR, 'output')
-
-def get_output_filenames():
-    """
-    Returns dynamic output filenames based on current timestamp.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_excel = os.path.join(package_output_path, f"EDG_Difference_{timestamp}.xlsx")
-    output_txt = os.path.join(package_output_path, f"EDG_Difference_{timestamp}.txt")
-    return output_excel, output_txt
-
-# --------------------------
-# Helper Functions
-# --------------------------
-def load_rename_mapping():
-    """
-    Load the rename mapping from the backend.xlsx file.
-    Expected to have two columns: Column A (original) and Column B (new name).
-    """
-    if not os.path.exists(package_backend_path):
-        print(f"Warning: Rename mapping file not found at {package_backend_path}. Continuing without renaming.")
-        return {}
-    try:
-        rename_df = pd.read_excel(package_backend_path, sheet_name='Rename')
-        mapping = dict(zip(rename_df.iloc[:, 0], rename_df.iloc[:, 1]))
-        return mapping
-    except Exception as e:
-        print("Error loading rename mapping:", e)
-        return {}
-
-def read_edg_file(filepath):
-    """
-    Reads an EDG Excel file and returns a standardized DataFrame.
-    Checks if a 'Data Glossary' sheet exists. If not, uses alternative expected columns.
-    Consolidates duplicate Attribute Registry IDs if needed.
-    Also strips trailing/leading spaces from column names and string values.
-    """
-    try:
-        xls = pd.ExcelFile(filepath)
-        # If 'Data Glossary' exists, use that sheet
-        if 'Data Glossary' in xls.sheet_names:
-            df = pd.read_excel(xls, 'Data Glossary')
-            required_cols = ['Attribute Name', 'Attribute Registry ID', 'Definition', 'Status', 
-                             'Business Segment', 'KDE', 'Privacy Designation', 'Authoritative Source', 'Domain']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-            if missing_cols:
-                raise ValueError(f"Missing columns in 'Data Glossary' sheet: {', '.join(missing_cols)}")
-            df = df[required_cols]
-        else:
-            df = pd.read_excel(xls, xls.sheet_names[0])
-            alt_cols = ['Attribute Registry ID', 'Name', 'Definition', 
-                        '[Asset] is classified by [Business Dimension] > Name', 
-                        '[Business Term] system of record [Technology Asset] > Name',
-                        'KDE', 'Privacy Designation', 'Authoritative Source', 'Status']
-            if 'Attribute Registry ID' not in df.columns:
-                raise ValueError("EDG file missing key column 'Attribute Registry ID'")
-            for col in alt_cols:
-                if col not in df.columns:
-                    df[col] = None
-            df = df[alt_cols]
-            # Consolidate duplicate records based on 'Attribute Registry ID'
-            df = df.groupby('Attribute Registry ID', as_index=False).agg({
-                'Name': 'first',
-                'Definition': 'first',
-                '[Asset] is classified by [Business Dimension] > Name': lambda x: ', '.join(sorted(set(str(i) for i in x if pd.notnull(i)))),
-                '[Business Term] system of record [Technology Asset] > Name': lambda x: ', '.join(sorted(set(str(i) for i in x if pd.notnull(i)))),
-                'KDE': 'first',
-                'Privacy Designation': 'first',
-                'Authoritative Source': 'first',
-                'Status': 'first'
-            })
-        # Strip trailing/leading spaces from column names
-        df.columns = df.columns.str.strip()
-        # Strip trailing/leading spaces from string values in the DataFrame
-        for col in df.select_dtypes(include=['object']).columns:
-            df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
-        # Apply renaming mapping if available
-        mapping = load_rename_mapping()
-        if mapping:
-            df.rename(columns=mapping, inplace=True)
-        return df
-    except Exception as e:
-        raise ValueError(f"Error reading EDG file {filepath}: {e}")
-
-def compare_edg_data(ref_df, curr_df):
-    """
-    Compare EDG_Current (curr_df) to EDG_Reference (ref_df) using 'Attribute Registry ID' as the key.
-    
-    Performs a left merge so that only records present in the current file are considered.
-    For each record:
-      - If no matching record is found in the reference, mark as a new attribute.
-      - If a match exists, compare each field (except 'Attribute Registry ID').
-    All differences for a given attribute are consolidated into a single 'Tool Comments' string.
-    """
-    merged_df = pd.merge(curr_df, ref_df, on='Attribute Registry ID', how='left', 
-                           suffixes=('_curr', '_ref'), indicator=True)
-    diff_details_list = []
-    for idx, row in merged_df.iterrows():
-        diff_details = {}
-        if row['_merge'] == 'left_only':
-            diff_details['new'] = True
-        else:
-            for col in curr_df.columns:
-                if col == 'Attribute Registry ID':
-                    continue
-                col_curr = f"{col}_curr"
-                col_ref = f"{col}_ref"
-                if col_curr in merged_df.columns and col_ref in merged_df.columns:
-                    val_curr = row[col_curr]
-                    val_ref = row[col_ref]
-                    # Skip if both are missing or equal
-                    if pd.isnull(val_ref) and pd.isnull(val_curr):
-                        continue
-                    if val_ref != val_curr:
-                        diff_details[col] = (val_ref, val_curr)
-        diff_details_list.append(diff_details)
-    merged_df['diff_details'] = diff_details_list
-    # Consolidate differences into a single Tool Comments string per row
-    tool_comments = []
-    for details in diff_details_list:
-        comments = []
-        if details.get('new'):
-            comments.append("New attribute added")
-        for key, diff in details.items():
-            if key == 'new':
-                continue
-            comments.append(f"Difference in {key}: '{diff[0]}' -> '{diff[1]}'")
-        tool_comments.append("; ".join(comments))
-    merged_df['Tool Comments'] = tool_comments
-    # Keep only rows with differences
-    merged_df = merged_df[merged_df['Tool Comments'] != ""]
-    return merged_df
-
-def save_reports(merged_df, ref_file_name, curr_file_name):
-    """
-    Saves an Excel report and a grouped text report.
-    
-    The Excel report is the merged DataFrame (one record per attribute with consolidated changes).
-    The text report is organized into sections:
-      - For new attributes, it lists each attribute (with ID and name).
-      - For each field with differences, a section is created with header:
-          "Difference IN <Field>"
-        Under each header, each line shows:
-          "Attr Registry ID - Changed from 'old' to 'new'"
-    Internal columns (_merge, diff_details) are dropped from the Excel output.
-    """
-    try:
-        output_excel, output_txt = get_output_filenames()
-        # Prepare Excel report by dropping internal columns
-        excel_df = merged_df.drop(columns=['_merge', 'diff_details'], errors='ignore')
-        excel_df.to_excel(output_excel, index=False)
-        
-        new_attributes = []
-        differences_by_field = {}  # key: field name, value: list of lines
-        
-        for idx, row in merged_df.iterrows():
-            diff = row['diff_details']
-            attr_id = row['Attribute Registry ID']
-            # Determine attribute name: prefer "Attribute Name" over "Name"
-            attr_name = row.get('Attribute Name', row.get('Name', ''))
-            if diff.get('new'):
-                new_attributes.append(f"{attr_id} - {attr_name}")
-            for key in diff:
-                if key == 'new':
-                    continue
-                old_val, new_val = diff[key]
-                line = f"{attr_id} - Changed from '{old_val}' to '{new_val}'"
-                if key not in differences_by_field:
-                    differences_by_field[key] = []
-                differences_by_field[key].append(line)
-        
-        report_lines = []
-        header = f"EDG Comparison Report\nInput Files: {ref_file_name} | {curr_file_name}\n{'='*40}\n"
-        report_lines.append(header)
-        
-        if new_attributes:
-            report_lines.append("New Attributes:")
-            for item in new_attributes:
-                report_lines.append("  " + item)
-            report_lines.append("")
-        
-        for field, lines in differences_by_field.items():
-            report_lines.append(f"Difference IN {field}:")
-            for line in lines:
-                report_lines.append("  " + line)
-            report_lines.append("")
-        
-        with open(output_txt, 'w') as f:
-            f.write("\n".join(report_lines))
-        return output_excel, output_txt
-    except Exception as e:
-        raise ValueError("Error saving reports: " + str(e))
-
-# --------------------------
-# Tkinter GUI
-# --------------------------
-class EDGComparisonApp(tk.Tk):
+class PrivacyAuditApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("EDG Comparison Tool")
-        self.geometry("750x600")  # Updated window size
+        self.title("NPI Privacy Designation Audit")
+        self.geometry("600x500")
+        # Input and output file paths
+        self.input_file_path = tk.StringVar()
+        self.output_file_path = tk.StringVar()
+        self.threshold_value = tk.IntVar(value=60)
         
-        self.ref_file = None
-        self.curr_file = None
-        
-        # File selection widgets
-        tk.Label(self, text="EDG Reference File:").pack(pady=5)
-        self.ref_entry = tk.Entry(self, width=80)
-        self.ref_entry.pack(pady=5)
-        tk.Button(self, text="Browse", command=self.browse_ref_file).pack(pady=5)
-        
-        tk.Label(self, text="EDG Current File:").pack(pady=5)
-        self.curr_entry = tk.Entry(self, width=80)
-        self.curr_entry.pack(pady=5)
-        tk.Button(self, text="Browse", command=self.browse_curr_file).pack(pady=5)
-        
-        # Status label and detailed status text area
-        self.status_label = tk.Label(self, text="Status: Waiting for input")
-        self.status_label.pack(pady=5)
-        self.status_text = st.ScrolledText(self, height=10, width=90)
-        self.status_text.pack(pady=5)
-        
-        tk.Button(self, text="Run Comparison", command=self.run_comparison).pack(pady=10)
+        self.create_widgets()
     
-    def log_status(self, message):
-        self.status_text.insert(tk.END, message + "\n")
-        self.status_text.see(tk.END)
-        self.update_idletasks()
+    def create_widgets(self):
+        # Input file selection
+        input_frame = tk.Frame(self)
+        input_frame.pack(pady=5, fill='x')
+        tk.Label(input_frame, text="Select EDG Data Dictionary Excel File:").pack(side="left", padx=5)
+        tk.Entry(input_frame, textvariable=self.input_file_path, width=40).pack(side="left", padx=5)
+        tk.Button(input_frame, text="Browse", command=self.browse_input).pack(side="left", padx=5)
+        
+        # Output file selection
+        output_frame = tk.Frame(self)
+        output_frame.pack(pady=5, fill='x')
+        tk.Label(output_frame, text="Output Excel File:").pack(side="left", padx=5)
+        tk.Entry(output_frame, textvariable=self.output_file_path, width=40).pack(side="left", padx=5)
+        tk.Button(output_frame, text="Save As", command=self.browse_output).pack(side="left", padx=5)
+        
+        # Fuzzy matching threshold setting
+        threshold_frame = tk.Frame(self)
+        threshold_frame.pack(pady=5, fill='x')
+        tk.Label(threshold_frame, text="Fuzzy Matching Threshold (0-100):").pack(side="left", padx=5)
+        self.threshold_spinbox = tk.Spinbox(threshold_frame, from_=0, to=100, textvariable=self.threshold_value, width=5)
+        self.threshold_spinbox.pack(side="left", padx=5)
+        
+        # Run and Exit buttons
+        button_frame = tk.Frame(self)
+        button_frame.pack(pady=5, fill='x')
+        tk.Button(button_frame, text="Run", command=self.run_process).pack(side="left", padx=10)
+        tk.Button(button_frame, text="Exit", command=self.quit).pack(side="left", padx=10)
+        
+        # Status display area
+        status_frame = tk.Frame(self)
+        status_frame.pack(pady=10, fill='both', expand=True)
+        tk.Label(status_frame, text="Status:").pack(anchor="w", padx=5)
+        self.status_text = tk.Text(status_frame, wrap="word", state="disabled")
+        self.status_text.pack(fill='both', expand=True, padx=5, pady=5)
     
-    def browse_ref_file(self):
-        file_path = filedialog.askopenfilename(
-            initialdir=package_input_path,
-            title="Select EDG Reference File",
-            filetypes=(("Excel files", "*.xlsx *.xls"), ("All files", "*.*"))
-        )
+    def browse_input(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")])
         if file_path:
-            self.ref_file = file_path
-            self.ref_entry.delete(0, tk.END)
-            self.ref_entry.insert(0, file_path)
+            self.input_file_path.set(file_path)
     
-    def browse_curr_file(self):
-        file_path = filedialog.askopenfilename(
-            initialdir=package_input_path,
-            title="Select EDG Current File",
-            filetypes=(("Excel files", "*.xlsx *.xls"), ("All files", "*.*"))
-        )
+    def browse_output(self):
+        file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel Files", "*.xlsx"), ("All Files", "*.*")])
         if file_path:
-            self.curr_file = file_path
-            self.curr_entry.delete(0, tk.END)
-            self.curr_entry.insert(0, file_path)
+            self.output_file_path.set(file_path)
     
-    def run_comparison(self):
-        if not self.ref_file or not self.curr_file:
-            messagebox.showerror("Input Error", "Please select both EDG Reference and Current files.")
+    def append_status(self, message):
+        self.status_text.config(state="normal")
+        self.status_text.insert("end", message + "\n")
+        self.status_text.see("end")
+        self.status_text.config(state="disabled")
+    
+    def run_process(self):
+        input_file = self.input_file_path.get()
+        output_file = self.output_file_path.get()
+        threshold = self.threshold_value.get()
+        
+        if not input_file or not os.path.exists(input_file):
+            messagebox.showerror("Error", "Please select a valid input Excel file.")
             return
-        try:
-            self.status_label.config(text="Status: Starting processing...")
-            self.log_status("Starting EDG comparison process.")
-            
-            ref_file_name = os.path.basename(self.ref_file)
-            curr_file_name = os.path.basename(self.curr_file)
-            
-            self.log_status("Reading EDG Reference file...")
-            ref_df = read_edg_file(self.ref_file)
-            self.log_status(f"EDG Reference file read successfully. Records: {len(ref_df)}")
-            
-            self.log_status("Reading EDG Current file...")
-            curr_df = read_edg_file(self.curr_file)
-            self.log_status(f"EDG Current file read successfully. Records: {len(curr_df)}")
-            
-            self.log_status("Comparing files...")
-            merged_df = compare_edg_data(ref_df, curr_df)
-            self.log_status(f"Comparison complete. Records with differences: {len(merged_df)}")
-            
-            self.log_status("Saving reports...")
-            output_excel, output_txt = save_reports(merged_df, ref_file_name, curr_file_name)
-            self.log_status(f"Reports saved successfully:\nExcel: {output_excel}\nText: {output_txt}")
-            self.status_label.config(text=f"Status: Completed. Output saved to {output_excel}")
-            messagebox.showinfo("Success", "Comparison completed successfully!")
-        except Exception as e:
-            self.status_label.config(text="Status: Error encountered.")
-            self.log_status("Error: " + str(e))
-            messagebox.showerror("Error", str(e))
-
-# --------------------------
-# Main execution
-# --------------------------
-if __name__ == '__main__':
-    app = EDGComparisonApp()
+        
+        if not output_file:
+            messagebox.showerror("Error", "Please select a valid output file path.")
+            return
+        
+        # Clear previous status messages
+        self.status_text.config(state="normal")
+        self.status_text.delete("1.0", "end")
+        self.status_text.config(state="disabled")
+        
+        self.append_status("Starting processing...")
+        # Run the process in a separate thread to keep the UI responsive
+        threading.Thread(target=self.process_file_thread, args=(input_file, output_file, threshold)).start()
+    
+    def process_file_thread(self, input_file, output_file, threshold):
+        def status_callback(message):
+            # Schedule status updates on the main thread
+            self.status_text.after(0, self.append_status, message)
+        
+        process_privacy_file(input_file, output_file, threshold=threshold, status_callback=status_callback)
+    
+if __name__ == "__main__":
+    app = PrivacyAuditApp()
     app.mainloop()
+
+
+HOW TO: Running the NPI Privacy Designation Audit Script with Tkinter UI
+
+Prerequisites:
+- Python 3.7+ installed.
+- Required Python libraries: pandas, rapidfuzz, openpyxl.
+  (Tkinter is included with Python. Install additional libraries via: pip install pandas rapidfuzz openpyxl)
+- Ensure your input Excel file (EDG Data Dictionary) is available and correctly formatted with the following columns:
+  "Attribute Registry ID", "Name", "Definition", "Privacy Designation", "CreatedOn".
+
+Steps:
+1. Place both "privacy_audit.py" and "privacy_ui.py" in the same directory.
+2. Open a terminal or command prompt in that directory.
+3. Run the UI script by executing:
+     python privacy_ui.py
+4. In the UI window:
+   - Click "Browse" to select the input Excel file.
+   - Click "Save As" to specify the output Excel file path.
+   - Adjust the fuzzy matching threshold using the spinbox (default is 60).
+5. Click the "Run" button to start processing.
+6. Monitor the status updates in the status box.
+7. Once complete, review the output Excel file generated at the specified path.
+
+Troubleshooting:
+- If the script cannot load the Excel file, verify that the file path is correct and the file is properly formatted.
+- Check the status messages in the UI for any errors.
+- Ensure all required libraries are installed.
+- For additional issues, review the terminal output for debugging information.
+
+
+# NPI Privacy Designation Audit Script FAQ
+
+## Overview
+The NPI Privacy Designation Audit Script automates the auditing of an Enterprise Data Glossary by grouping similar definitions using fuzzy matching and identifying discrepancies in privacy designations. A new graphical user interface (GUI) built with Tkinter allows users to easily select input files, adjust matching parameters, and view status updates in real time.
+
+## Table of Contents
+- Overview
+- Key Features
+- Detailed Process
+- Frequently Asked Questions (FAQ)
+- Troubleshooting
+- Additional Resources
+
+## Key Features
+- **User-Friendly Interface:**
+  - Select the input Excel file (EDG Data Dictionary) using a file browser.
+  - Specify the output Excel file path.
+  - Adjust the fuzzy matching threshold using a spinbox.
+  - View real-time status updates during processing.
+- **Robust Processing:**
+  - Data extraction, cleaning, and deduplication.
+  - Efficient fuzzy grouping using RapidFuzz.
+  - Automated identification of conflicting privacy designations.
+- **Clear Output:**
+  - Final results are exported to an Excel file with flagged discrepancies for further review.
+
+## Detailed Process
+1. **Data Loading:**
+   - The tool loads the input Excel file and selects key columns: "Attribute Registry ID", "Name", "Definition", "Privacy Designation", and "CreatedOn".
+   - Duplicate records are removed to ensure a clean dataset.
+2. **Fuzzy Grouping:**
+   - Definitions are compared pairwise using RapidFuzz's token sort ratio.
+   - Definitions exceeding the user-defined threshold are grouped together, reducing noise from minor textual differences.
+3. **Discrepancy Identification:**
+   - The grouped data is pivoted to count occurrences of each privacy designation.
+   - Discrepancies are flagged when conflicting designations (e.g., "Not NPI" vs. "NPI") occur for the same grouped definition.
+4. **Output Generation:**
+   - The discrepancy summary is merged with the original data.
+   - The final report is saved as an Excel file at the user-specified location.
+
+## Frequently Asked Questions (FAQ)
+**Q1: What is the purpose of this script?**  
+A: It automates the auditing process for enterprise data dictionaries by identifying conflicting privacy designations using fuzzy matching.
+
+**Q2: How do I run the tool?**  
+A: Run the `privacy_ui.py` file. The Tkinter-based GUI will guide you to select your input file, choose an output path, set the matching threshold, and monitor the process.
+
+**Q3: How can I adjust the fuzzy matching sensitivity?**  
+A: Use the spinbox in the UI to set a threshold value between 0 and 100. A higher threshold applies stricter matching criteria.
+
+**Q4: What should I do if an error occurs during processing?**  
+A: Check the status box in the UI for detailed error messages. Verify that the input file exists, is in the correct format, and that all required libraries are installed.
+
+**Q5: What are the required libraries for this tool?**  
+A: The script requires pandas, rapidfuzz, tkinter (included with Python), and openpyxl.
+
+## Troubleshooting
+- **Input File Issues:** Ensure that your input Excel file contains the required columns and is not corrupted.
+- **Library Installation:** If you encounter module import errors, reinstall the required libraries using pip.
+- **UI Issues:** If the GUI does not launch, run the script from a terminal to view error messages.
+- **Performance Concerns:** For very large datasets, consider adjusting the threshold or optimizing system resources.
+
+## Additional Resources
+- [Python Documentation](https://docs.python.org/)
+- [RapidFuzz Documentation](https://maxbachmann.github.io/RapidFuzz/)
+- [Tkinter Documentation](https://docs.python.org/3/library/tkinter.html)
+- Contact your system administrator for further support.
