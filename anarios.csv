@@ -1,0 +1,16 @@
+Test Case ID,Description,Input,Expected Result,Category
+TC01,'Attribute Registry ID' exists in glossary,ATTR123456 (exists in Full Name column),Skip or confirm presence; No new relationship or addition,Attribute ID Handling
+TC02,'Attribute Registry ID' does not exist and is in ATTR format,ATTR987654 (not in glossary),Add to Assigned Attribute ID; Create relationship,Attribute ID Handling
+TC03,'Attribute Registry ID' is a valid Term ID,123456 (maps to Attribute ID ATTR112233),Assigned Attribute ID = ATTR112233; Create relationship,Term ID Handling
+TC04,'Attribute Registry ID' is a Term ID but does not map,999999 (not found in glossary),Log as unresolved; No relationship created,Term ID Handling
+TC05,'Attribute Registry ID' is blank or malformed,"N/A, blank, or invalid format",Skip or log error; No additions or relationships,Validation
+TC06,Validate summary email counts,100 assets; 40 with Edg ID; 30 with glossary link; 10 converted from Term ID,Email shows correct counts for each category,Summary Email
+TC07,Duplicate 'Attribute Registry ID's,Multiple rows with same ATTR ID,Only one addition and relationship per unique ID,Edge Case
+TC08,Duplicate Term IDs,Same Term ID across rows,Consistent mapping; No double-count,Edge Case
+TC09,Large dataset test,"10,000+ records with mixed valid/invalid IDs",All logic applied correctly without failure,Performance
+TC10,Mixed formatting in 'Attribute Registry ID',"'attr123456', 'ATTR 123456', etc.",Normalize and evaluate correctly,Validation
+TC11,'Attribute Registry ID' missing but matches related ID in alternate field,"ATTR654321 not in Full Name column, but exists in a mapped alternate column",Still considered not found; Add to Assigned Attribute ID; Create relationship,Attribute ID Handling
+TC12,Multiple unmatched 'Attribute Registry ID' entries,"ATTR000001, ATTR000002, ATTR000003 all not found",Each added to Assigned Attribute ID and linked,Attribute ID Handling
+TC13,'Attribute Registry ID' exists but with trailing spaces,'ATTR999999 ' (with whitespace),Trim input; Match should succeed and skip addition,Validation
+TC14,Term ID maps to multiple Attribute IDs (data integrity issue),Term ID 123456 returns multiple results in glossary,Log data conflict; Skip or flag for manual review,Term ID Handling
+TC15,Term ID maps to deprecated Attribute ID,Term ID 555555 maps to ATTR777777 (marked deprecated),Skip or warn; Do not use deprecated ID in Assigned Attribute ID,Term ID Handling
