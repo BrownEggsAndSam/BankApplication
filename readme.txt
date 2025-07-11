@@ -1,21 +1,33 @@
+class AttributeRow {
+    String selectedTable
+    Integer sequenceNumber
+    Asset attribute
+    Map attributeData
+}
+=======================
+List<AttributeRow> allAttributeRows = []
 
+===============
 for (attributePhysId in attributePhysIds) {
     Asset attribute = assetApi.getAsset(string2Uuid(attributePhysId))
     Map attributeData = allAttributeData.get(attributePhysId)
 
-    if (attribute == null || attributeData == null) continue
+    if (attribute == null || attributeData == null) {
+        loggerApi.error("[PDD Template Export] Error: Could not find attribute with ID ${attributePhysId}. Skipping")
+        continue
+    }
 
-    def seqNum = attributeData.get("sequenceNumber") ?: "0"
+    def seq = attributeData.get("sequenceNumber") ?: "0"
 
     allAttributeRows.add(new AttributeRow(
         selectedTable: selectedTable,
-        sequenceNumber: seqNum.toInteger(),
+        sequenceNumber: seq.toInteger(),
         attribute: attribute,
         attributeData: attributeData
     ))
 }
-
-// Sort collected attributes by table name and sequence number
+==================
+loggerApi.info("[PDD Template Export] Sorting attribute metadata rows...")
 allAttributeRows.sort { a, b ->
     a.selectedTable <=> b.selectedTable ?: a.sequenceNumber <=> b.sequenceNumber
 }
