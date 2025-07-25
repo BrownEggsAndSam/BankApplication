@@ -9,6 +9,9 @@
 *
 *
 *
+*
+*
+*
 */
 import org.flowable.engine.delegate.BpmnError
 
@@ -444,6 +447,49 @@ Map getAttributeData(List attributePhysId, String domainName, String tableName) 
     return attributes
 }
 
+Map getCMDBAssetData(String assetId) {
+    Map cmdbData = new HashMap<String, Object>()
+
+    String tvc = """{
+        "TableViewConfig": {
+            "displayLength": -1,
+            "Resources": {
+                "Term": {
+                    "Signifier": { "name": "AssetName" },
+                    "Vocabulary": { "Name": { "name": "Domain_Name" } },
+                    "StringAttribute": [
+                        { "labelId": "0191e176-0309-73cd-bf48-08132aae4050", "LongExpression": { "name": "TOD" }},
+                        { "labelId": "0191e175-d927-71a3-af97-310f10c08bcc", "LongExpression": { "name": "BOD" }}
+                    ]
+                }
+            },
+            "Filter": {
+                "AND": [
+                    { "Field": { "name": "Id", "operator": "EQUALS", "value": "${assetId}" }}
+                ]
+            },
+            "Columns": [
+                { "Column": { "fieldName": "AssetName" }},
+                { "Column": { "fieldName": "TOD" }},
+                { "Column": { "fieldName": "BOD" }}
+            ]
+        }
+    }"""
+
+    def json = new JsonSlurper().parseText(runOutputJSON(tvc))
+    def res = json.aaData
+
+    if (res?.size() > 0) {
+        cmdbData.put("TOD", res[0].TOD ?: "")
+        cmdbData.put("BOD", res[0].BOD ?: "")
+    } else {
+        loggerApi.warn("No CMDB asset data found for ID: ${assetId}")
+    }
+
+    return cmdbData
+}
+
+
 /****************************************
  *                 Main                *
  ****************************************/
@@ -467,6 +513,12 @@ try {
         Sheet amdSheet = workbook.getSheet("Attribute Metadata")
         Map allDsetData
         String cloudAssetId = execution.getVariable("cmdbAssetId")
+        Map cmdbData = getCMDBAssetData(cloudAssetId)
+        String bod = cmdbData.get("BOD")
+        String tod = cmdbData.get("TOD")
+        loggerApi.info("[PDD Template Export] Retrieved CMDB Asset Data for ${cloudAssetId}: BOD = ${bod}, TOD = ${tod}")
+
+
         final int HEADER_LINE = 2
 
         domainName = cloudAssetId + '.' + execution.getVariable("containerType")
@@ -539,7 +591,7 @@ try {
             mdDataSourceCell.setCellValue("")
             mdDataSourceCell.setCellStyle(infoNeededCellStyle)
             mdDestLayerCell = mdRow.createCell(mdHeaderMap.get("Dataset Layer"))
-            mdDestLayerCell.setCellValue("")
+            mdDestLayerCell.setCellValue("Not Applicable")
             mdDestLayerCell.setCellStyle(infoNeededCellStyle)
             mdConfidentialityCell = mdRow.createCell(mdHeaderMap.get("Confidentiality Level"))
             mdConfidentialityCell.setCellValue("")
@@ -555,19 +607,18 @@ try {
             mdTopic.setCellStyle(infoNeededCellStyle)
             mdTopicCategory = mdRow.createCell(mdHeaderMap.get("Topic Category"))
             mdTopicCategory.setCellValue("")
-            mdTopicCategory.setCellStyle(infoNeededCellStyle)
             mdBusinessOwnerOrSmeCell = mdRow.createCell(mdHeaderMap.get("Business Owner or Data SME"))
-            String businessOwner = dsetData.get("businessOwner") ?: ""
-            mdBusinessOwnerOrSmeCell.setCellValue(businessOwner)
-            if (businessOwner.trim().isEmpty()) {
+            mdBusinessOwnerOrSmeCell.setCellValue(bod ? bod + "@gmail.com" : "")
+            if (!bod) {
                 mdBusinessOwnerOrSmeCell.setCellStyle(infoNeededCellStyle)
             }
+
             mdTechnicalPocCell = mdRow.createCell(mdHeaderMap.get("Technical POC"))
-            String technicalPOC = dsetData.get("technicalPOC") ?: ""
-            mdTechnicalPocCell.setCellValue(technicalPOC)
-            if (technicalPOC.trim().isEmpty()) {
+            mdTechnicalPocCell.setCellValue(tod ? tod + "@gmail.com" : "")
+            if (!tod) {
                 mdTechnicalPocCell.setCellStyle(infoNeededCellStyle)
             }
+
             mdAppShortNameCell = mdRow.createCell(mdHeaderMap.get("App Short Name"))
             mdAppShortNameCell.setCellValue("")
             mdAppShortNameCell.setCellStyle(infoNeededCellStyle)
@@ -590,6 +641,7 @@ try {
             mdConsumerIndicatorCell = mdRow.createCell(mdHeaderMap.get("Consumer Data (Indicator)"))
             mdConsumerIndicatorCell.setCellValue("")
             mdConsumerIndicatorCell.setCellStyle(infoNeededCellStyle)
+            String registeredBy = execution.getVariable("user$Intiator")
             mdRegisteredByCell = mdRow.createCell(mdHeaderMap.get("Registered By"))
             mdRegisteredByCell.setCellValue("")
             mdRegisteredByCell.setCellStyle(infoNeededCellStyle)
