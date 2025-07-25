@@ -1,62 +1,65 @@
-class AttributeRow {
-    String selectedTable
-    Integer sequenceNumber
-    Asset attribute
-    Map attributeData
+List selectedTablesMapList = execution.getVariable("selectedTables")
+List selectedTables = new ArrayList<String>()
+List batches = new ArrayList<List<String>>()
+int curBatchCount = 0
+
+// File size estimation parameters
+final int TEMPLATE_BASE_SIZE_MB = 1
+final int MAX_FILE_SIZE_MB = 20
+final int ESTIMATED_TABLE_SIZE_KB = 300
+final int MAX_ADDITIONAL_MB = MAX_FILE_SIZE_MB - TEMPLATE_BASE_SIZE_MB
+final int MAX_ADDITIONAL_KB = MAX_ADDITIONAL_MB * 1024
+
+// Dynamically compute new batch size based on estimate
+int estimatedBatchSizeLimit = Math.floor(MAX_ADDITIONAL_KB / ESTIMATED_TABLE_SIZE_KB) as int
+
+if(verboseLogs) {
+    loggerApi.info("[PDD Template Export] Assumed file size per dataset: ${ESTIMATED_TABLE_SIZE_KB} KB")
+    loggerApi.info("[PDD Template Export] Estimated max batch size: ${estimatedBatchSizeLimit} datasets (to stay under ${MAX_FILE_SIZE_MB}MB)")
 }
-=======================
-List<AttributeRow> allAttributeRows = []
 
-===============
-for (attributePhysId in attributePhysIds) {
-    Asset attribute = assetApi.getAsset(string2Uuid(attributePhysId))
-    Map attributeData = allAttributeData.get(attributePhysId)
+// Handle fallback to all tables if user selected none
+if(verboseLogs) loggerApi.info("[PDD Template Export] User selected Tables: ${selectedTablesMapList}")
+if(selectedTablesMapList == null || selectedTablesMapList.isEmpty()) {
+    List tableNames = execution.getVariable("tableNameMapping")
 
-    if (attribute == null || attributeData == null) {
-        loggerApi.error("[PDD Template Export] Error: Could not find attribute with ID ${attributePhysId}. Skipping")
-        continue
+    for(int i = 0; i < tableNames.size(); i++) {
+        selectedTables.add(tableNames.get(i).value)
+    }
+} else {
+    for(Map tableMapping : selectedTablesMapList) {
+        selectedTables.add(tableMapping.get("value"))
+    }
+}
+
+if(verboseLogs) loggerApi.info("[PDD Template Export] Final list of selected tables: ${selectedTables}")
+if(verboseLogs) loggerApi.info("[PDD Template Export] Total number of selected Tables: ${selectedTables.size()}")
+
+// Build batches using new size limit
+for(String table : selectedTables) {
+    if(curBatchCount == 0) {
+        batches.add(new ArrayList<String>())
     }
 
-    def seq = attributeData.get("sequenceNumber") ?: "0"
+    batches.get(batches.size() - 1).add(table)
+    curBatchCount++
 
-    allAttributeRows.add(new AttributeRow(
-        selectedTable: selectedTable,
-        sequenceNumber: seq.toInteger(),
-        attribute: attribute,
-        attributeData: attributeData
-    ))
-}
-==================
-loggerApi.info("[PDD Template Export] Sorting attribute metadata rows...")
-allAttributeRows.sort { a, b ->
-    a.selectedTable <=> b.selectedTable ?: a.sequenceNumber <=> b.sequenceNumber
+    if(curBatchCount == estimatedBatchSizeLimit) {
+        curBatchCount = 0
+    }
 }
 
-// Write sorted data to Attribute Metadata sheet
-for (row in allAttributeRows) {
-    Row amdRow = amdSheet.createRow(amdSheet.getLastRowNum() + 1)
-
-    amdRow.createCell(amdHeaderMap.get("Attribute Registry ID")).setCellValue(row.attributeData.get("attributeRegId"))
-    amdRow.createCell(amdHeaderMap.get("Physical Attribute Name")).setCellValue(row.attribute.getDisplayName())
-
-    Cell amdDescCell = amdRow.createCell(amdHeaderMap.get("Logical Attribute Name + Description/Definition"))
-    amdDescCell.setCellValue(row.attributeData.get("logicalNamePlusDescription"))
-    amdDescCell.setCellStyle(infoNeededCellStyle)
-
-    Cell amdDataSetNameCell = amdRow.createCell(amdHeaderMap.get("Dataset Registry ID"))
-    amdDataSetNameCell.setCellValue(row.selectedTable)
-    amdDataSetNameCell.setCellStyle(infoNeededCellStyle)
-
-    amdRow.createCell(amdHeaderMap.get("Attribute Schema Version")).setCellValue("1")
-    amdRow.createCell(amdHeaderMap.get("Attribute Sequence Number")).setCellValue(row.sequenceNumber)
-    amdRow.createCell(amdHeaderMap.get("Data Type")).setCellValue(row.attributeData.get("dataType"))
-    amdRow.createCell(amdHeaderMap.get("Length / Precision")).setCellValue(row.attributeData.get("lengthPrecision"))
-    amdRow.createCell(amdHeaderMap.get("Scale")).setCellValue(row.attributeData.get("scale"))
-    amdRow.createCell(amdHeaderMap.get("Format")).setCellValue(row.attributeData.get("format"))
-
-    Cell amdDateCell = amdRow.createCell(amdHeaderMap.get("Expected Production Date"))
-    amdDateCell.setCellValue("")
-    amdDateCell.setCellStyle(defaultDateCellStyle)
-
-    amdRow.createCell(amdHeaderMap.get("Dataset Type")).setCellValue(execution.getVariable("datasetType"))
+// Log batches
+if(verboseLogs) {
+    loggerApi.info("[PDD Template Export] Number of batches created: ${batches.size()}")
+    for(int i = 0; i < batches.size(); i++) {
+        loggerApi.info("[PDD Template Export] Batch ${i+1} contains ${batches[i].size()} tables: ${batches[i]}")
+        if(batches[i].size() >= (estimatedBatchSizeLimit * 0.9)) {
+            loggerApi.info("[PDD Template Export] Warning: Batch ${i+1} is near the estimated size limit.")
+        }
+    }
 }
+
+// Store for downstream subprocess loop
+execution.setVariable("batches", batches)
+execution.setVariable("numBatches", batches.size())
