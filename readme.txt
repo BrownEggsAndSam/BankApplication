@@ -1,33 +1,21 @@
 @Field String registeredByEmail = ""
 
-@Field String registeredByEmail = ""
-
-void resolveRegisteredByEmail() {
-    loggerApi.info("[PDD Template Export] Attempting to resolve registeredByEmail using userApi.getCurrentUser()")
-
+String resolveRegisteredByEmail() {
     try {
-        def user = userApi.getCurrentUser()
-
-        if (user == null) {
-            loggerApi.warn("[PDD Template Export] userApi.getCurrentUser() returned null.")
-            registeredByEmail = ""
+        def userOptional = userApi.getCurrentUser()
+        if (userOptional.isPresent()) {
+            def user = userOptional.get()
+            return user.getEmailAddress() ?: ""
         } else {
-            registeredByEmail = user.getEmailAddress()
-            if (registeredByEmail == null || registeredByEmail.trim().isEmpty()) {
-                loggerApi.warn("[PDD Template Export] Current user object found, but email address is null or blank.")
-            } else {
-                loggerApi.info("[PDD Template Export] Successfully resolved registeredByEmail: ${registeredByEmail}")
-            }
-
-            // Log entire user object for debugging (if needed)
-            loggerApi.debug("[PDD Template Export] User object details: ${user}")
+            loggerApi.warn("[PDD Template Export] No current user found.")
+            return ""
         }
-
     } catch (Exception e) {
-        loggerApi.error("[PDD Template Export] Exception occurred while resolving registeredByEmail: ${e.message}")
-        registeredByEmail = ""
+        loggerApi.warn("[PDD Template Export] Error while resolving registered by email: ${e.getMessage()}")
+        return ""
     }
 }
+
 
 
 resolveRegisteredByEmail()
