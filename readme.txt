@@ -1,19 +1,29 @@
-String resolveRegisteredByEmail() {
-    String email = ""
+String resolveInitiatorEmail() {
+    String registeredByEmail = ""
 
     try {
-        def initiator = execution.getVariable("user\$initiator")
-        if (initiator != null) {
-            loggerApi.info("[PDD Template Export] Retrieved user\$initiator: ${initiator}")
-            email = initiator.getEmailAddress()
-            loggerApi.info("[PDD Template Export] Retrieved user\$initiator email: ${email}")
+        String initiatorId = execution.getVariable("initiator")
+
+        if (initiatorId != null) {
+            User initiatorUser = userApi.getUser(string2Uuid(initiatorId))
+            registeredByEmail = initiatorUser?.getEmailAddress() ?: ""
+            loggerApi.info("[PDD Template Export] Registered By Email resolved: ${registeredByEmail}")
         } else {
-            loggerApi.warn("[PDD Template Export] user\$initiator is null")
+            loggerApi.warn("[PDD Template Export] 'initiator' variable is null — did you forget to set it in the Start Event?")
         }
 
     } catch (Exception e) {
-        loggerApi.warn("[PDD Template Export] Exception while getting user\$initiator email: ${e.getMessage()}")
+        loggerApi.warn("[PDD Template Export] Failed to resolve initiator email: ${e.getMessage()}")
     }
 
-    return email ?: ""
+    return registeredByEmail
+}
+
+String registeredByEmail = resolveInitiatorEmail()
+
+Cell mdRegisteredByCell = mdRow.createCell(mdHeaderMap.get("Registered By"))
+mdRegisteredByCell.setCellValue(registeredByEmail)
+
+if (registeredByEmail.trim().isEmpty()) {
+    mdRegisteredByCell.setCellStyle(infoNeededCellStyle)
 }
