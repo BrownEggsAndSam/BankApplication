@@ -1,17 +1,88 @@
-String initiatorEmail = ""
-try {
-    String initiatorId = execution.getProcessInstance().getStartUserId()
-    if (initiatorId != null) {
-        User initiatorUser = userApi.findUserByUsername(initiatorId)
-        initiatorEmail = initiatorUser?.getEmailAddress()
+Map getCMDBData(String cloudAssetId) {
+    Map cmdbData = [:]
+    String tvc = """{
+        "TableViewConfig": {
+            "displayLength": -1,
+            "Resources": {
+                "Asset": {
+                    "skipComplexRelationsViewPermissions": true,
+                    "Signifier": { "name": "FullName" },
+                    "Vocabulary": { "Name": { "name": "Domain_Name" } },
+                    "StringAttribute": [
+                        {
+                            "labelId": "0191e176-0309-73cd-bf48-08132ae0450a",
+                            "LongExpression": { "name": "TOD" }
+                        },
+                        {
+                            "labelId": "0191e175-d927-71a3-af97-310f10c88cc8",
+                            "LongExpression": { "name": "BOD" }
+                        }
+                    ]
+                }
+            },
+            "Filter": {
+                "AND": [
+                    {
+                        "Field": {
+                            "name": "StringAttribute_03feeee2-83af-4158-acb2-9660d25cb42f_Value",
+                            "operator": "EQUALS",
+                            "caseInsensitive": true,
+                            "value": "${cloudAssetId}"
+                        }
+                    }
+                ]
+            },
+            "Columns": [
+                {
+                    "Group": {
+                        "name": "StringAttribute_0191e176-0309-73cd-bf48-08132ae0450a",
+                        "Columns": [
+                            {
+                                "Column": {
+                                    "fieldName": "TOD"
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "Group": {
+                        "name": "StringAttribute_0191e175-d927-71a3-af97-310f10c88cc8",
+                        "Columns": [
+                            {
+                                "Column": {
+                                    "fieldName": "BOD"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }"""
+
+    try {
+        if (verboseLogs) loggerApi.info("[PDD Template Export] Querying CMDB Asset Registry for CloudAssetId = ${cloudAssetId}")
+        def json = new JsonSlurper().parseText(runOutputJSON(tvc))
+        def res = json?.aaData
+
+        if (res == null || res.isEmpty()) {
+            loggerApi.warn("[PDD Template Export] No CMDB asset found for CloudAssetId = ${cloudAssetId}")
+            return [TOD: "", BOD: ""]
+        }
+
+        def row = res[0]
+        String tod = row?.TOD ?: ""
+        String bod = row?.BOD ?: ""
+
+        cmdbData.put("TOD", tod)
+        cmdbData.put("BOD", bod)
+
+        loggerApi.info("[PDD Template Export] Retrieved TOD='${tod}' and BOD='${bod}' for CloudAssetId = ${cloudAssetId}")
+        return cmdbData
+
+    } catch (Exception e) {
+        loggerApi.error("[PDD Template Export] Error retrieving CMDB metadata for ${cloudAssetId}: ${e.message}")
+        return [TOD: "", BOD: ""]
     }
-} catch (Exception e) {
-    loggerApi.warn("[PDD Template Export] Could not retrieve initiator email: " + e.getMessage())
-}
-
-Cell mdRegisteredByCell = mdRow.createCell(mdHeaderMap.get("Registered By"))
-mdRegisteredByCell.setCellValue(initiatorEmail)
-
-if (initiatorEmail.trim().isEmpty()) {
-    mdRegisteredByCell.setCellStyle(infoNeededCellStyle)
 }
