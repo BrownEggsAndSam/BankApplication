@@ -1,15 +1,19 @@
-String getRegisteredByEmail() {
+String resolveRegisteredByEmail() {
     String email = ""
+
     try {
-        def initiator = execution.getVariable("user$initiator")
+        def initiator = execution.getVariable("user\$initiator")
         if (initiator != null) {
+            loggerApi.info("[PDD Template Export] Retrieved user\$initiator: ${initiator}")
             email = initiator.getEmailAddress()
-            loggerApi.info("[PDD Template Export] Registered By email resolved from user\$initiator: ${email}")
+            loggerApi.info("[PDD Template Export] Retrieved user\$initiator email: ${email}")
         } else {
-            loggerApi.warn("[PDD Template Export] user\$initiator is null — no email will be populated")
+            loggerApi.warn("[PDD Template Export] user\$initiator is null")
         }
+
     } catch (Exception e) {
-        loggerApi.warn("[PDD Template Export] Exception while retrieving user\$initiator email: ${e.getMessage()}")
+        loggerApi.warn("[PDD Template Export] Exception while getting user\$initiator email: ${e.getMessage()}")
     }
+
     return email ?: ""
 }
