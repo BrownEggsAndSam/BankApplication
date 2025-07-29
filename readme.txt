@@ -24,39 +24,25 @@ Map getCMDBData(String cloudAssetId) {
                 "AND": [
                     {
                         "Field": {
-                            "name": "StringAttribute_03feeee2-83af-4158-acb2-9660d25cb42f_Value",
+                            "name": "Domain_Name",
                             "operator": "EQUALS",
                             "caseInsensitive": true,
+                            "value": "CMDB Asset Registry"
+                        }
+                    },
+                    {
+                        "Field": {
+                            "name": "AssetName",
+                            "operator": "EQUALS",
                             "value": "${cloudAssetId}"
                         }
                     }
                 ]
             },
             "Columns": [
-                {
-                    "Group": {
-                        "name": "StringAttribute_0191e176-0309-73cd-bf48-08132ae0450a",
-                        "Columns": [
-                            {
-                                "Column": {
-                                    "fieldName": "TOD"
-                                }
-                            }
-                        ]
-                    }
-                },
-                {
-                    "Group": {
-                        "name": "StringAttribute_0191e175-d927-71a3-af97-310f10c88cc8",
-                        "Columns": [
-                            {
-                                "Column": {
-                                    "fieldName": "BOD"
-                                }
-                            }
-                        ]
-                    }
-                }
+                { "Column": { "fieldName": "AssetName" }},
+                { "Column": { "fieldName": "TOD" }},
+                { "Column": { "fieldName": "BOD" }}
             ]
         }
     }"""
@@ -86,3 +72,9 @@ Map getCMDBData(String cloudAssetId) {
         return [TOD: "", BOD: ""]
     }
 }
+
+
+
+Map cmdbData = getCMDBData(cloudAssetId)
+mdTechnicalPocCell.setCellValue(cmdbData.TOD)
+mdBusinessOwnerOrSmeCell.setCellValue(cmdbData.BOD)
