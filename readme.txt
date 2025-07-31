@@ -1,73 +1,52 @@
- def getCmdbAssetDataTemplate = """{
-    "TableViewConfig": {
-        "displayLength": 5,
-        "Resources": {
-            "Asset": {
-                "DisplayName": { "name": "DisplayName" },
-                "StringAttribute": [
-                    {
-                        "labelId": "0192e3cc-99f7-783c-b3d6-af7396f7af26",
-                        "LongExpression": { "name": "BusinessOwner" }
-                    },
-                    {
-                        "labelId": "8e362cd8-056d-4bde-8e362cd8d5b0",
-                        "LongExpression": { "name": "TechnologyOwner" }
-                    }
-                ]
-            }
-        },
-        "Filter": {
-            "AND": [
-                {
-                    "Field": {
-                        "name": "StringAttribute_03feee22-83af-4158-acb2-9660db25c4f2_Value",
-                        "operator": "EQUALS",
-                        "caseInsensitive": true,
-                        "value": "%s"
-                    }
-                }
-            ]
-        },
-        "Columns": [
-            { "Column": { "fieldName": "DisplayName" }},
-            { "Column": { "fieldName": "BusinessOwner" }},
-            { "Column": { "fieldName": "TechnologyOwner" }}
-        ]
-    }
-}"""
+Map getCmdbDerivedOwners(String cmdbAssetId) {
+    String tvc = String.format(filterCmdbAssetRegistryByCmdbAssetIdTemplate, cmdbAssetId)
+    def json = new JsonSlurper().parseText(runOutputJSON(tvc))
+    def results = json.aaData
 
+    def derivedBusinessOwner = ""
+    def derivedTechnologyOwner = ""
+    def derivedCmdbAssetName = ""
 
-Map getCmdbAssetData(String selectedCmdbAssetId) {
-    Map cmdbMetadata = new HashMap<String, String>()
-    def response = executeExportJson(String.format(getCmdbAssetDataTemplate, selectedCmdbAssetId))
-    def parsedData = new JsonSlurper().parseText(response)
-    def res = parsedData.get("aaData")
+    if (results.size() > 0) {
+        def cmdbAsset = results.first()
 
-    if (res.size() > 0) {
-        def firstResult = res.first()
-        cmdbMetadata.put("cmdbAssetName", firstResult.DisplayName ?: "")
-        cmdbMetadata.put("businessOwner", firstResult["StringAttribute_0192e3cc-99f7-783c-b3d6-af7396f7af26_Value"] ?: "")
-        cmdbMetadata.put("technologyOwner", firstResult["StringAttribute_8e362cd8-056d-4bde-8e362cd8d5b0_Value"] ?: "")
+        derivedCmdbAssetName = cmdbAsset["DisplayName"]
 
-        if (verboseLogs) {
-            loggerApi.info("[PDD Template Export] CMDB Asset Display Name: ${cmdbMetadata.get("cmdbAssetName")}")
-            loggerApi.info("[PDD Template Export] Business Owner: ${cmdbMetadata.get("businessOwner")}")
-            loggerApi.info("[PDD Template Export] Technical Owner: ${cmdbMetadata.get("technologyOwner")}")
-        }
-    } else {
-        loggerApi.error("[PDD Template Export] No CMDB asset found for ID: ${selectedCmdbAssetId}")
+        def businessOwnerList = cmdbAsset["StringAttribute_" + businessOwnerUuid]
+        if (businessOwnerList?.size() > 0)
+            derivedBusinessOwner = businessOwnerList.first()["StringAttribute_" + businessOwnerUuid + "_Value"]
+
+        def techOwnerList = cmdbAsset["StringAttribute_" + technologyOwnerUuid]
+        if (techOwnerList?.size() > 0)
+            derivedTechnologyOwner = techOwnerList.first()["StringAttribute_" + technologyOwnerUuid + "_Value"]
     }
 
-    return cmdbMetadata
+    return [
+        "derivedCmdbAssetName": derivedCmdbAssetName,
+        "derivedBusinessOwner": derivedBusinessOwner,
+        "derivedTechnologyOwner": derivedTechnologyOwner
+    ]
 }
 
-Map cmdbData = getCmdbAssetData(cloudAssetId)
-String derivedCmdbAssetName = cmdbData.get("cmdbAssetName") ?: ""
-String derivedBusinessOwner = cmdbData.get("businessOwner") ?: ""
-String derivedTechnologyOwner = cmdbData.get("technologyOwner") ?: ""
 
-String datasetName = derivedCmdbAssetName ? "${derivedCmdbAssetName}_${selectedTable}" : selectedTable
-mdDatasetNameCell.setCellValue(datasetName)
+============
+Map derivedOwnerData = getCmdbDerivedOwners(cloudAssetId)
+
+String derivedBusinessOwner = derivedOwnerData.derivedBusinessOwner
+String derivedTechnologyOwner = derivedOwnerData.derivedTechnologyOwner
+String derivedCmdbAssetName = derivedOwnerData.derivedCmdbAssetName
+
+if (verboseLogs) {
+    loggerApi.info("[PDD Template Export] Derived CMDB Asset Name: ${derivedCmdbAssetName}")
+    loggerApi.info("[PDD Template Export] Derived Business Owner: ${derivedBusinessOwner}")
+    loggerApi.info("[PDD Template Export] Derived Technology Owner: ${derivedTechnologyOwner}")
+}
+
+============
+mdBusinessOwnerOrSmeCell = mdRow.createCell(mdHeaderMap.get("Business Owner or Data SME"))
 mdBusinessOwnerOrSmeCell.setCellValue(derivedBusinessOwner)
-mdTechnicalPocCell.setCellValue(derivedTechnologyOwner)
+mdBusinessOwnerOrSmeCell.setCellStyle(infoNeededCellStyle)
 
+mdTechnicalPocCell = mdRow.createCell(mdHeaderMap.get("Technical POC"))
+mdTechnicalPocCell.setCellValue(derivedTechnologyOwner)
+mdTechnicalPocCell.setCellStyle(infoNeededCellStyle)
