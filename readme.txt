@@ -1,17 +1,23 @@
-String resolveRegisteredByEmail() {
-    String email = ""
+Map getCmdbAssetData(String selectedCmdbAssetId) {
+    Map cmdbMetadata = new HashMap<String, String>()
+    def response = executeExportJson(String.format(getCmdbAssetDataTemplate, selectedCmdbAssetId))
+    def parsedData = new JsonSlurper().parseText(response)
+    def res = parsedData.get("aaData")
 
-    try {
-        def currentUser = userApi.getCurrentUser()
-        if (currentUser != null) {
-            email = currentUser.getEmailAddress()
-            loggerApi.info("[PDD Template Export] Resolved current user email: $email")
-        } else {
-            loggerApi.warn("[PDD Template Export] currentUser is null")
+    if (res.size() > 0) {
+        def firstResult = res.first()
+        cmdbMetadata.put("cmdbAssetName", firstResult.DisplayName ?: "")
+        cmdbMetadata.put("businessOwner", firstResult["StringAttribute_0192e3cc-99f7-783c-b3d6-af7396f7af26_Value"] ?: "")
+        cmdbMetadata.put("technologyOwner", firstResult["StringAttribute_8e362cd8-056d-4bde-8e362cd8d5b0_Value"] ?: "")
+
+        if (verboseLogs) {
+            loggerApi.info("[PDD Template Export] CMDB Asset Display Name: ${cmdbMetadata.get("cmdbAssetName")}")
+            loggerApi.info("[PDD Template Export] Business Owner: ${cmdbMetadata.get("businessOwner")}")
+            loggerApi.info("[PDD Template Export] Technical Owner: ${cmdbMetadata.get("technologyOwner")}")
         }
-    } catch (Exception e) {
-        loggerApi.warn("[PDD Template Export] Exception while resolving current user email: ${e.getMessage()}")
+    } else {
+        loggerApi.error("[PDD Template Export] No CMDB asset found for ID: ${selectedCmdbAssetId}")
     }
 
-    return email
+    return cmdbMetadata
 }
