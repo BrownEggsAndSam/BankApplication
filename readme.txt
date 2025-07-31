@@ -10,15 +10,16 @@ if (initiatorId) {
         ).getResults()
 
         if (!foundUsers.isEmpty()) {
-            registeredByEmail = foundUsers[0]?.email ?: ""
-            loggerApi.info("[PDD Template Export] Registered By: ${registeredByEmail}")
+            def initiatorUser = foundUsers[0]
+            registeredByEmail = initiatorUser?.getEmailAddress() ?: ""
+            loggerApi.info("[PDD Template Export] Resolved initiator email: ${registeredByEmail}")
         } else {
             loggerApi.warn("[PDD Template Export] No user found with username: ${initiatorId}")
         }
 
     } catch (Exception e) {
-        loggerApi.error("[PDD Template Export] Could not fetch initiator user by username ${initiatorId}: ${e.message}")
+        loggerApi.error("[PDD Template Export] Failed to get initiator email from username ${initiatorId}: ${e.message}")
     }
 } else {
-    loggerApi.warn("[PDD Template Export] No initiator variable found")
+    loggerApi.warn("[PDD Template Export] 'initiator' variable is null or missing")
 }
