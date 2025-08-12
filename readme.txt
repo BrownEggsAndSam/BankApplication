@@ -225,3 +225,26 @@ Consistency: Ensures the same Physical Name maps to the same approved Attribute 
 
 Quality: Prevents invalid, outdated, or inconsistent mappings from entering production.
 
+
+ Attribute Matching Logic
+
+User ID present?
+
+In EDG → ✅ Green
+
+Not in EDG → ❌ Red
+
+No User ID → Match Physical Name in Cloud EDL:
+
+1 match → Auto-fill, ✅ Green
+
+>1 matches → Log options, no fill
+
+0 matches → Log “No recommendations”
+
+Operational?
+
+Maps to ATTR08105 → 🟧 Orange flag
+
+Conflicts → Keep user ID, log suggestions
+
