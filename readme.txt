@@ -135,3 +135,93 @@ Future-ready: Can expand to fuzzy matching, synonym support, and attribute relat
 If you’d like, I can also make you a one-slide visual showing the workflow from User Upload → Cache Lookup → Matching & Coloring → Output & Review, which would make the presentation more executive-friendly.
 
 Do you want me to create that visual diagram for the deck? It’ll make the demo flow click instantly.
+
+
+Executive Presentation: DSET Enablement Tool
+1. Background
+The Dataset (DSET) Enablement Tool is a Collibra workflow that streamlines Attribute Rationalization during dataset onboarding.
+
+Attribute IDs uniquely identify business concepts; Physical Names are field-level names that vary widely across systems.
+
+Without automation, mapping Physical Names to the correct Attribute IDs is manual, slow, and error-prone.
+
+2. Purpose
+Automate Attribute ID population and validation for new datasets using existing registered datasets and the Enterprise Data Glossary (EDG).
+
+Provide users with clear matches, validations, and recommendations to improve speed and consistency in metadata registration.
+
+3. Problem Statement
+Manual Attribute Rationalization:
+
+Time-consuming: Users manually search EDG and datasets for matches.
+
+Inconsistent: Different teams may use outdated or incorrect IDs.
+
+Error-prone: Increases the risk of duplicate or invalid mappings.
+
+Impact:
+
+Delays in onboarding datasets.
+
+Reduced trust in metadata accuracy.
+
+4. Goal
+Reduce onboarding time, improve accuracy, and increase metadata consistency by:
+
+Automatically filling known Attribute IDs.
+
+Validating user-provided IDs.
+
+Logging ambiguous or operational attributes for quick review.
+
+5. How It Works (High-Level Backend Overview)
+Uses final approved domains in Collibra:
+
+Cloud EDL Dataset Registry & Data Dictionary → source for Physical Name → Attribute ID mappings.
+
+Enterprise Data Glossary (EDG) → validates Attribute IDs (only accepted/active terms).
+
+Matches are exact, case-insensitive, whitespace-normalized for predictability.
+
+Color coding highlights:
+
+Green = valid match
+
+Red = invalid Attribute ID
+
+Orange = operational attribute (ATTR08105)
+
+Ambiguities and conflicts go to an Attribute Log for user action.
+
+6. Demo Outline — Business Features
+Upload DSET Template (focus on Attribute Information tab).
+
+Automatic Matching & Validation:
+
+Auto-fill single matches.
+
+Validate existing IDs.
+
+Flag operational and invalid entries.
+
+Attribute Log Review:
+
+Multiple matches.
+
+Conflicts with user-provided IDs.
+
+No recommendations.
+
+Efficiency Gains:
+
+Show before/after of manual vs. automated process.
+
+Highlight time savings and accuracy improvements.
+
+7. Business Impact
+Efficiency: Cut onboarding time from hours to minutes.
+
+Consistency: Ensures the same Physical Name maps to the same approved Attribute ID enterprise-wide.
+
+Quality: Prevents invalid, outdated, or inconsistent mappings from entering production.
+
