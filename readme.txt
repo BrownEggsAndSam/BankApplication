@@ -57,3 +57,46 @@ def process_file(file):
         "CMDB Asset ID": df.get("CMDB Asset ID", ""),
         "CMDB Asset Name": df.get("CMDB Asset Name", ""),
         "Container Type": df.get("Container Type", ""),
+        "Definition": df.get("Column Definition", ""),
+        "Table Logical Name": df.get("Table Logical Name", ""),
+        "Sub Model Name": df.get("Sub Model Name", ""),
+        "Glossary Attribute ID provided in model": df.get("Glossary Attribute ID", ""),
+        "Primary Key Indicator": df.get("Primary Key Indicator", ""),
+        "Data Dic Data Type": df.get("Data Type", "").map(normalize_dtype),
+        "Maximum Text Length": df.get("Length", ""),
+        "Data Dic Scale": df.get("Scale", ""),
+        "Null-able Indicator": df.get("Null", ""),
+        "Logical Column Name": df.get("Column Logical Name", ""),
+        "Column Sequence Number": df.get("Column Sequence Number", ""),
+        "Name": col_col,
+    })
+    col_df["[Column] is part of [Table] > Full Name"] = (
+        col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str) + "." + table_col.astype(str)
+    )
+    col_df["Community"] = col_df["CMDB Asset ID"]
+    col_df["Domain"] = col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str)
+    col_df["Full Name"] = col_df["[Column] is part of [Table] > Full Name"] + "." + col_df["Name"].astype(str)
+
+    # -------- Save --------
+    base = Path(file).stem
+    table_out = f"{output_path}{base}_table.xlsx"
+    col_out = f"{output_path}{base}_column.xlsx"
+
+    table_df.to_excel(table_out, index=False)
+    col_df.to_excel(col_out, index=False)
+
+    print(f"  → Table file:   {Path(table_out).name} ({len(table_df)} rows)")
+    print(f"  → Column file:  {Path(col_out).name} ({len(col_df)} rows)")
+    print("Done.")
+
+def main():
+    excel_files = list(Path(input_path).glob("*.xls*"))
+    if not excel_files:
+        print("No Excel files found in ./input/")
+        return
+    print(f"Found {len(excel_files)} file(s) to process.")
+    for file in excel_files:
+        process_file(file)
+
+if __name__ == "__main__":
+    main()
