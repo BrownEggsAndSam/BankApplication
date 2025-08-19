@@ -8,18 +8,24 @@ output_path = "./output/"
 Path(output_path).mkdir(parents=True, exist_ok=True)
 
 def normalize_dtype(val):
-    if pd.isna(val): return val
+    if pd.isna(val): 
+        return val
     s = str(val).strip().upper()
     if s == "DOUBLE PRECISION": return "DOUBLE"
     if s == "FLOATA": return "FLOAT"
     if s == "TIMESTAMPTZ": return "TIMESTAMP"
     return s
 
-def process_file(file):
-    df = pd.read_excel(file)
-    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+def trim_all_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Trim whitespace from all string cells."""
+    return df.map(lambda x: x.strip() if isinstance(x, str) else x)
 
-    # fallbacks for common short column names
+def process_file(file):
+    print(f"\n--- Processing: {Path(file).name} ---")
+    df = pd.read_excel(file)
+    df = trim_all_columns(df)
+
+    # Fallbacks for table/column names
     table_col = df["Container (Table) Name"] if "Container (Table) Name" in df else df.get("Table", "")
     col_col   = df["Data Element Name"] if "Data Element Name" in df else df.get("Column", "")
 
@@ -51,36 +57,3 @@ def process_file(file):
         "CMDB Asset ID": df.get("CMDB Asset ID", ""),
         "CMDB Asset Name": df.get("CMDB Asset Name", ""),
         "Container Type": df.get("Container Type", ""),
-        "Definition": df.get("Column Definition", ""),
-        "Table Logical Name": df.get("Table Logical Name", ""),
-        "Sub Model Name": df.get("Sub Model Name", ""),
-        "Glossary Attribute ID provided in model": df.get("Glossary Attribute ID", ""),
-        "Primary Key Indicator": df.get("Primary Key Indicator", ""),
-        "Data Dic Data Type": df.get("Data Type", "").map(normalize_dtype),
-        "Maximum Text Length": df.get("Length", ""),
-        "Data Dic Scale": df.get("Scale", ""),
-        "Null-able Indicator": df.get("Null", ""),
-        "Logical Column Name": df.get("Column Logical Name", ""),
-        "Column Sequence Number": df.get("Column Sequence Number", ""),
-        "Name": col_col,
-    })
-    col_df["[Column] is part of [Table] > Full Name"] = (
-        col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str) + "." + table_col.astype(str)
-    )
-    col_df["Community"] = col_df["CMDB Asset ID"]
-    col_df["Domain"] = col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str)
-    col_df["Full Name"] = col_df["[Column] is part of [Table] > Full Name"] + "." + col_df["Name"].astype(str)
-
-    # -------- Save --------
-    base = Path(file).stem
-    table_df.to_excel(f"{output_path}{base}_table.xlsx", index=False)
-    col_df.to_excel(f"{output_path}{base}_column.xlsx", index=False)
-
-    print(f"Processed {file} → {base}_table.xlsx ({len(table_df)}) & {base}_column.xlsx ({len(col_df)})")
-
-def main():
-    for file in Path(input_path).glob("*.xls*"):
-        process_file(file)
-
-if __name__ == "__main__":
-    main()
