@@ -2,18 +2,22 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
-# -------- Paths --------
-input_path = Path("./input")
-# Output root folder with timestamp per run
-run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_root = Path("./output") / run_stamp
-tables_dir = output_root / "tables"
-columns_dir = output_root / "columns"
-rels_dir = output_root / "relationships"
-for d in [tables_dir, columns_dir, rels_dir]:
-    d.mkdir(parents=True, exist_ok=True)
+# Folders
+input_path = "./_pddReuploadScript/input/"
+output_path = "./_pddReuploadScript/output/"
+Path(output_path).mkdir(parents=True, exist_ok=True)
 
-# -------- Helpers --------
+# Timestamped run folder + subfolders
+run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+run_root = f"{output_path}{run_stamp}/"
+tables_dir = f"{run_root}tables/"
+columns_dir = f"{run_root}columns/"
+rels_dir = f"{run_root}relationships/"
+concat_dir = f"{run_root}Concatenated Uploads/"
+
+for d in [tables_dir, columns_dir, rels_dir, concat_dir]:
+    Path(d).mkdir(parents=True, exist_ok=True)
+
 def normalize_dtype(val):
     if pd.isna(val):
         return val
@@ -24,127 +28,117 @@ def normalize_dtype(val):
     return s
 
 def trim_all_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Trim whitespace from all string cells (no applymap deprecation)."""
+    """Trim whitespace from all string cells."""
     return df.map(lambda x: x.strip() if isinstance(x, str) else x)
 
-def get_series(df: pd.DataFrame, name: str, fallback: str | None = None) -> pd.Series:
-    """Safe column fetch; returns a Series of len(df) even if missing."""
-    if name in df.columns:
-        return df[name]
-    if fallback and fallback in df.columns:
-        return df[fallback]
-    return pd.Series([""] * len(df), index=df.index, dtype=object)
-
-def with_fallback(df: pd.DataFrame, primary: str, fallbacks: list[str]) -> pd.Series:
-    """Try primary then each fallback; return blank Series if none found."""
-    if primary in df.columns:
-        return df[primary]
-    for fb in fallbacks:
-        if fb in df.columns:
-            return df[fb]
-    return pd.Series([""] * len(df), index=df.index, dtype=object)
-
-# -------- Processing --------
-def process_file(path: Path):
-    print(f"\n--- Processing: {path.name} ---")
-    df = pd.read_excel(path)
+def process_file(file):
+    print(f"\n--- Processing: {Path(file).name} ---")
+    df = pd.read_excel(file)
     df = trim_all_columns(df)
 
-    # Common columns (with short-name fallbacks for Table/Column)
-    table_name = with_fallback(df, "Container (Table) Name", ["Table", "TABLE_NAME", "Container"])
-    data_element = with_fallback(df, "Data Element Name", ["Column", "COLUMN_NAME", "Data Element"])
-
-    diagram_name = with_fallback(df, "Diagram Name", ["Model File Name", "Diagram"])
-    cmdb_id = get_series(df, "CMDB Asset ID")
-    cmdb_name = get_series(df, "CMDB Asset Name")
-    container_type = get_series(df, "Container Type")
-    table_logical = with_fallback(df, "Table Logical Name", ["Logical Table Name"])
-    sub_model = get_series(df, "Sub Model Name")
-
-    # ========= TABLE TEMPLATE =========
+    # -------- Table template --------
     table_df = pd.DataFrame({
         "Asset Type": "Table",
         "Domain Type": "Physical Data Dictionary",
         "Physical Model Name": "Physical",
-        "Model File Name": diagram_name,
-        "Load File Name": path.name,
-        "CMDB Asset ID": cmdb_id,
-        "CMDB Asset Name": cmdb_name,
-        "Container Type": container_type,
-        "Name": table_name,
-        "Table Logical Name": table_logical,
-        "Sub Model Name": sub_model,
-        "Definition": with_fallback(df, "Table/View Definition", ["Table Definition", "Definition (Table)"]),
+        "Model File Name": df["Diagram Name"],
+        "Load File Name": df["Excel File Name"],
+        "CMDB Asset ID": df["CMDB Asset ID"],
+        "CMDB Asset Name": df["CMDB Asset Name"],
+        "Container Type": df["Container Type"],
+        "Name": df["Container (Table) Name"],
+        "Table Logical Name": df["Table Logical Name"],
+        "Sub Model Name": df["Sub Model Name"],
+        "Definition": df["Table/View Definition"],
     })
     table_df["Community"] = table_df["CMDB Asset ID"]
     table_df["Domain"] = table_df["CMDB Asset ID"].astype(str) + "." + table_df["Container Type"].astype(str)
     table_df["Full Name"] = table_df["Domain"] + "." + table_df["Name"].astype(str)
-    # 1 row per unique table
     table_df = table_df.drop_duplicates(subset=["Full Name"]).reset_index(drop=True)
 
-    # ========= COLUMN TEMPLATE =========
+    # -------- Column template --------
     col_df = pd.DataFrame({
         "Asset Type": "Column",
         "Domain Type": "Physical Data Dictionary",
         "Physical Model Name": "Physical",
-        "Model File Name": diagram_name,        # added
-        "Load File Name": path.name,            # added
-        "CMDB Asset ID": cmdb_id,
-        "CMDB Asset Name": cmdb_name,
-        "Container Type": container_type,
-        "Definition": with_fallback(df, "Column Definition", ["Definition (Column)", "Col Definition"]),
-        "Table Logical Name": table_logical,
-        "Sub Model Name": sub_model,
-        "Glossary Attribute ID provided in model": with_fallback(df, "Glossary Attribute ID", ["Glossary Attribute ID provided in model"]),
-        "Primary Key Indicator": get_series(df, "Primary Key Indicator"),
-        "Data Dic Data Type": with_fallback(df, "Data Type", ["Data Dic Data Type"]).map(normalize_dtype),
-        "Maximum Text Length": with_fallback(df, "Length", ["Maximum Text Length"]),
-        "Data Dic Scale": with_fallback(df, "Scale", ["Data Dic Scale"]),
-        "Null-able Indicator": with_fallback(df, "Null", ["Null-able Indicator"]),
-        "Logical Column Name": with_fallback(df, "Column Logical Name", ["Logical Column Name"]),
-        "Column Sequence Number": get_series(df, "Column Sequence Number"),
-        "Name": data_element,  # Data Element Name
+        "Model File Name": df["Diagram Name"],
+        "Load File Name": df["Excel File Name"],
+        "CMDB Asset ID": df["CMDB Asset ID"],
+        "CMDB Asset Name": df["CMDB Asset Name"],
+        "Container Type": df["Container Type"],
+        "Definition": df["Column Definition"],
+        "Table Logical Name": df["Table Logical Name"],
+        "Sub Model Name": df["Sub Model Name"],
+        "Glossary Attribute ID provided in model": df["Glossary Attribute ID"],
+        "Primary Key Indicator": df["Primary Key Indicator"],
+        "Data Dic Data Type": df["Data Type"].map(normalize_dtype),
+        "Maximum Text Length": df["Length"],
+        "Data Dic Scale": df["Scale"],
+        "Null-able Indicator": df["Null"],
+        "Logical Column Name": df["Column Logical Name"],
+        "Column Sequence Number": df["Column Sequence Number"],
+        "Name": df["Data Element Name"],
     })
-    # Compose names used for relationships and full column identity
     part_of_full_name = (
-        cmdb_id.astype(str) + "." + container_type.astype(str) + "." + table_name.astype(str)
+        col_df["CMDB Asset ID"].astype(str)
+        + "."
+        + col_df["Container Type"].astype(str)
+        + "."
+        + df["Container (Table) Name"].astype(str)
     )
-    col_df["Community"] = cmdb_id.astype(str)
-    col_df["Domain"] = cmdb_id.astype(str) + "." + container_type.astype(str)
-    col_df["Full Name"] = part_of_full_name + "." + data_element.astype(str)
+    col_df["Community"] = col_df["CMDB Asset ID"]
+    col_df["Domain"] = col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str)
+    col_df["Full Name"] = part_of_full_name + "." + col_df["Name"].astype(str)
 
-    # ========= RELATIONSHIP FILE =========
+    # -------- Relationship file --------
     rel_df = pd.DataFrame({
         "Full Name": col_df["Full Name"],
         "[Column] is part of [Table] > Full Name": part_of_full_name
     })
 
-    # ========= SAVE =========
-    base = path.stem
-    table_out = tables_dir / f"{base}_table.xlsx"
-    col_out = columns_dir / f"{base}_column.xlsx"
-    rel_out = rels_dir / f"{base}_relationships.xlsx"
+    # -------- Save individual --------
+    base = Path(file).stem
+    table_out = f"{tables_dir}{base}_table.xlsx"
+    col_out = f"{columns_dir}{base}_column.xlsx"
+    rel_out = f"{rels_dir}{base}_relationships.xlsx"
 
     table_df.to_excel(table_out, index=False)
     col_df.to_excel(col_out, index=False)
     rel_df.to_excel(rel_out, index=False)
 
-    print(f"  → Tables:        {table_out.name} ({len(table_df)} rows)")
-    print(f"  → Columns:       {col_out.name} ({len(col_df)} rows)")
-    print(f"  → Relationships: {rel_out.name} ({len(rel_df)} rows)")
+    print(f"  → Table file:        {Path(table_out).name} ({len(table_df)} rows)")
+    print(f"  → Column file:       {Path(col_out).name} ({len(col_df)} rows)")
+    print(f"  → Relationship file: {Path(rel_out).name} ({len(rel_df)} rows)")
     print("Done.")
 
+    return table_df, col_df, rel_df
+
 def main():
-    excel_files = sorted(input_path.glob("*.xls*"))
+    excel_files = list(Path(input_path).glob("*.xls*"))
     if not excel_files:
         print("No Excel files found in ./input/")
-        print(f"Output run folder created: {output_root}")
         return
-
-    print(f"Run folder: {output_root}")
     print(f"Found {len(excel_files)} file(s) to process.")
-    for f in excel_files:
-        process_file(f)
+    print(f"Run folder: {run_root}")
+
+    all_tables, all_columns, all_rels = [], [], []
+
+    for file in excel_files:
+        tdf, cdf, rdf = process_file(file)
+        all_tables.append(tdf)
+        all_columns.append(cdf)
+        all_rels.append(rdf)
+
+    # -------- Concatenated Uploads --------
+    if all_tables:
+        pd.concat(all_tables, ignore_index=True).to_excel(f"{concat_dir}tables.xlsx", index=False)
+        pd.concat(all_columns, ignore_index=True).to_excel(f"{concat_dir}columns.xlsx", index=False)
+        pd.concat(all_rels, ignore_index=True).to_excel(f"{concat_dir}relationships.xlsx", index=False)
+
+        print("\nConcatenated Uploads written:")
+        print(f"  → tables.xlsx        ({sum(len(t) for t in all_tables)} rows)")
+        print(f"  → columns.xlsx       ({sum(len(c) for c in all_columns)} rows)")
+        print(f"  → relationships.xlsx ({sum(len(r) for r in all_rels)} rows)")
 
 if __name__ == "__main__":
     main()
