@@ -2,31 +2,18 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
-# -------- Paths --------
+# -------- Paths (same pattern as your previous script) --------
 input_path = "./_pddReuploadScript/input/"
 output_path = "./_pddReuploadScript/output/"
 Path(output_path).mkdir(parents=True, exist_ok=True)
 
-# Timestamped run folder + subfolders
+# Timestamped run folder + relationships subfolder
 run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 run_root = f"{output_path}{run_stamp}/"
-tables_dir = f"{run_root}tables/"
-columns_dir = f"{run_root}columns/"
 rels_dir = f"{run_root}relationships/"
-concat_dir = f"{run_root}Concatenated Uploads/"
-for d in [tables_dir, columns_dir, rels_dir, concat_dir]:
-    Path(d).mkdir(parents=True, exist_ok=True)
+Path(rels_dir).mkdir(parents=True, exist_ok=True)
 
 # -------- Helpers --------
-def normalize_dtype(val):
-    if pd.isna(val):
-        return val
-    s = str(val).strip().upper()
-    if s == "DOUBLE PRECISION": return "DOUBLE"
-    if s == "FLOATA": return "FLOAT"
-    if s == "TIMESTAMPTZ": return "TIMESTAMP"
-    return s
-
 def trim_all_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Trim whitespace from all string cells (no applymap)."""
     return df.map(lambda x: x.strip() if isinstance(x, str) else x)
@@ -36,99 +23,88 @@ def require_columns(df: pd.DataFrame, cols: list[str], file_name: str):
     if missing:
         raise KeyError(f"{file_name}: missing required columns: {missing}")
 
-# -------- Processing --------
-def process_file(file):
-    print(f"\n--- Processing: {Path(file).name} ---")
+def ensure_no_conflicting_table_ids(tables: pd.DataFrame, file_name: str):
+    """
+    Ensures that each Table Full Name maps to a single Asset Id.
+    If conflicting Asset Ids exist for the same Full Name, raise.
+    """
+    # Keep only rows where Asset Id is not null, group and check uniqueness
+    grp = tables.groupby("Full Name")["Asset Id"].nunique(dropna=True)
+    conflicts = grp[grp > 1]
+    if not conflicts.empty:
+        bad = conflicts.index.tolist()
+        raise ValueError(
+            f"{file_name}: conflicting Asset Ids found for Table Full Name(s): {bad}"
+        )
+
+def derive_table_full_name(full_name: str, file_name: str, row_idx: int) -> str:
+    """
+    For a Column Full Name, derive the Table Full Name by removing the suffix after the last dot.
+    Example: 'MSR04661.Table.ytdactivity.dt' -> 'MSR04661.Table.ytdactivity'
+    """
+    if not isinstance(full_name, str):
+        raise ValueError(f"{file_name}: Row {row_idx}: Full Name is not a string for a Column asset.")
+    if "." not in full_name:
+        raise ValueError(f"{file_name}: Row {row_idx}: Column Full Name must contain at least one '.' → '{full_name}'")
+    return full_name.rsplit(".", 1)[0]
+
+# -------- Core Processing --------
+def process_file(file: Path):
+    print(f"\n--- Processing: {file.name} ---")
     df = pd.read_excel(file, dtype=object)
     df = trim_all_columns(df)
 
-    # Required headers (strict)
-    required_for_table = [
-        "Diagram Name","Excel File Name","CMDB Asset ID","CMDB Asset Name","Container Type",
-        "Container (Table) Name","Table Logical Name","Sub Model Name","Table/View Definition"
-    ]
-    required_for_column = [
-        "Diagram Name","Excel File Name","CMDB Asset ID","CMDB Asset Name","Container Type",
-        "Column Definition","Table Logical Name","Sub Model Name","Glossary Attribute ID",
-        "Primary Key Indicator","Data Type","Length","Scale","Null","Column Logical Name",
-        "Column Sequence Number","Data Element Name","Container (Table) Name"
-    ]
-    require_columns(df, required_for_table + required_for_column, Path(file).name)
+    # Hard requirement on columns
+    required = ["Asset Type", "Full Name", "Asset Id"]
+    require_columns(df, required, file.name)
 
-    # -------- Table template --------
-    table_df = pd.DataFrame({
-        "Asset Type": "Table",
-        "Domain Type": "Physical Data Dictionary",
-        "Physical Model Name": "Physical",
-        "Model File Name": df["Diagram Name"],
-        "Load File Name": df["Excel File Name"],
-        "CMDB Asset ID": df["CMDB Asset ID"],
-        "CMDB Asset Name": df["CMDB Asset Name"],
-        "Container Type": df["Container Type"],
-        "Name": df["Container (Table) Name"],
-        "Table Logical Name": df["Table Logical Name"],
-        "Sub Model Name": df["Sub Model Name"],
-        "Definition": df["Table/View Definition"],
-    })
-    table_df["Community"] = table_df["CMDB Asset ID"]
-    table_df["Domain"] = table_df["CMDB Asset ID"].astype(str) + "." + table_df["Container Type"].astype(str)
-    table_df["Full Name"] = table_df["Domain"] + "." + table_df["Name"].astype(str)
-    table_df = table_df.drop_duplicates(subset=["Full Name"]).reset_index(drop=True)
+    # Normalize Asset Type for strict equality checks (keep original values)
+    atype_norm = df["Asset Type"].map(lambda x: str(x).strip().casefold() if isinstance(x, str) else x)
 
-    # -------- Column template --------
-    col_df = pd.DataFrame({
-        "Asset Type": "Column",
-        "Domain Type": "Physical Data Dictionary",
-        "Physical Model Name": "Physical",
-        "Model File Name": df["Diagram Name"],
-        "Load File Name": df["Excel File Name"],
-        "CMDB Asset ID": df["CMDB Asset ID"],
-        "CMDB Asset Name": df["CMDB Asset Name"],
-        "Container Type": df["Container Type"],
-        "Definition": df["Column Definition"],
-        "Table Logical Name": df["Table Logical Name"],
-        "Sub Model Name": df["Sub Model Name"],
-        "Glossary Attribute ID provided in model": df["Glossary Attribute ID"],
-        "Primary Key Indicator": df["Primary Key Indicator"],
-        "Data Dic Data Type": df["Data Type"].map(normalize_dtype),
-        "Maximum Text Length": df["Length"],
-        "Data Dic Scale": df["Scale"],
-        "Null-able Indicator": df["Null"],
-        "Logical Column Name": df["Column Logical Name"],
-        "Column Sequence Number": df["Column Sequence Number"],
-        "Name": df["Data Element Name"],
-    })
-    part_of_full_name = (
-        col_df["CMDB Asset ID"].astype(str)
-        + "."
-        + col_df["Container Type"].astype(str)
-        + "."
-        + df["Container (Table) Name"].astype(str)
+    # Partition tables and columns strictly
+    tables = df[atype_norm == "table"].copy()
+    columns = df[atype_norm == "column"].copy()
+
+    # Validate Table uniqueness (no conflicting Asset Ids per Table Full Name)
+    ensure_no_conflicting_table_ids(tables, file.name)
+
+    # Build lookup: Table Full Name -> Asset Id
+    table_map = (
+        tables[["Full Name", "Asset Id"]]
+        .dropna(subset=["Full Name"])  # Full Name must exist
+        .drop_duplicates(subset=["Full Name"])
+        .set_index("Full Name")["Asset Id"]
+        .to_dict()
     )
-    col_df["Community"] = col_df["CMDB Asset ID"]
-    col_df["Domain"] = col_df["CMDB Asset ID"].astype(str) + "." + col_df["Container Type"].astype(str)
-    col_df["Full Name"] = part_of_full_name + "." + col_df["Name"].astype(str)
 
-    # -------- Relationship file --------
-    rel_df = pd.DataFrame({
-        "Full Name": col_df["Full Name"],
-        "[Column] is part of [Table] > Full Name": part_of_full_name
-    })
+    # Derive each Column's Table Full Name and map to the Table's Asset Id
+    derived_table_full = []
+    for idx, val in columns["Full Name"].items():
+        derived_table_full.append(derive_table_full_name(val, file.name, idx))
+    columns["__Derived Table Full Name__"] = derived_table_full
 
-    # -------- Save per-file --------
-    base = Path(file).stem
-    table_path = f"{tables_dir}{base}_table.xlsx"
-    column_path = f"{columns_dir}{base}_column.xlsx"
-    rel_path = f"{rels_dir}{base}_relationships.xlsx"
-    table_df.to_excel(table_path, index=False)
-    col_df.to_excel(column_path, index=False)
-    rel_df.to_excel(rel_path, index=False)
+    rel_asset_id = columns["__Derived Table Full Name__"].map(table_map)
 
-    print(f"  → Tables:        {Path(table_path).name} ({len(table_df)} rows)")
-    print(f"  → Columns:       {Path(column_path).name} ({len(col_df)} rows)")
-    print(f"  → Relationships: {Path(rel_path).name} ({len(rel_df)} rows)")
+    # Create output with required relationship column
+    out = columns.copy()
+    out["[Column] is part of [Table] > Asset Id"] = rel_asset_id
 
-    return table_df, col_df, rel_df
+    # Drop helper / unwanted rows and columns
+    # 1) Drop all rows where Asset Type == 'Table' (already filtered by using 'columns')
+    # 2) Drop columns that are entirely empty
+    out = out.loc[:, out.notna().any(axis=0)]
+
+    # Save per-file output
+    base = file.stem
+    out_path = f"{rels_dir}{base}_relationships_by_assetid.xlsx"
+    out.to_excel(out_path, index=False)
+
+    # Summary
+    total_cols = len(out)
+    populated = out["[Column] is part of [Table] > Asset Id"].notna().sum() if "[Column] is part of [Table] > Asset Id" in out.columns else 0
+    print(f"  → Relationships file: {Path(out_path).name}")
+    print(f"    Rows (Column assets only): {total_cols}")
+    print(f"    '[Column] is part of [Table] > Asset Id' populated: {populated}/{total_cols}")
 
 def main():
     excel_files = list(Path(input_path).glob("*.xls*"))
@@ -137,22 +113,8 @@ def main():
         return
     print(f"Found {len(excel_files)} file(s). Run folder: {run_root}")
 
-    all_tables, all_columns, all_rels = [], [], []
     for file in excel_files:
-        tdf, cdf, rdf = process_file(file)
-        all_tables.append(tdf)
-        all_columns.append(cdf)
-        all_rels.append(rdf)
-
-    # Concatenated Uploads (single 3 files)
-    pd.concat(all_tables, ignore_index=True).to_excel(f"{concat_dir}tables.xlsx", index=False)
-    pd.concat(all_columns, ignore_index=True).to_excel(f"{concat_dir}columns.xlsx", index=False)
-    pd.concat(all_rels, ignore_index=True).to_excel(f"{concat_dir}relationships.xlsx", index=False)
-
-    print("\nConcatenated Uploads written:")
-    print(f"  → tables.xlsx        ({sum(len(t) for t in all_tables)} rows)")
-    print(f"  → columns.xlsx       ({sum(len(c) for c in all_columns)} rows)")
-    print(f"  → relationships.xlsx ({sum(len(r) for r in all_rels)} rows)")
+        process_file(file)
 
 if __name__ == "__main__":
     main()
