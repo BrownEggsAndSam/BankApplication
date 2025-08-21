@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
-# -------- Paths (same pattern as your previous script) --------
+# -------- Paths --------
 input_path = "./_pddReuploadScript/input/"
 output_path = "./_pddReuploadScript/output/"
 Path(output_path).mkdir(parents=True, exist_ok=True)
@@ -24,11 +24,6 @@ def require_columns(df: pd.DataFrame, cols: list[str], file_name: str):
         raise KeyError(f"{file_name}: missing required columns: {missing}")
 
 def ensure_no_conflicting_table_ids(tables: pd.DataFrame, file_name: str):
-    """
-    Ensures that each Table Full Name maps to a single Asset Id.
-    If conflicting Asset Ids exist for the same Full Name, raise.
-    """
-    # Keep only rows where Asset Id is not null, group and check uniqueness
     grp = tables.groupby("Full Name")["Asset Id"].nunique(dropna=True)
     conflicts = grp[grp > 1]
     if not conflicts.empty:
@@ -38,10 +33,6 @@ def ensure_no_conflicting_table_ids(tables: pd.DataFrame, file_name: str):
         )
 
 def derive_table_full_name(full_name: str, file_name: str, row_idx: int) -> str:
-    """
-    For a Column Full Name, derive the Table Full Name by removing the suffix after the last dot.
-    Example: 'MSR04661.Table.ytdactivity.dt' -> 'MSR04661.Table.ytdactivity'
-    """
     if not isinstance(full_name, str):
         raise ValueError(f"{file_name}: Row {row_idx}: Full Name is not a string for a Column asset.")
     if "." not in full_name:
@@ -54,44 +45,33 @@ def process_file(file: Path):
     df = pd.read_excel(file, dtype=object)
     df = trim_all_columns(df)
 
-    # Hard requirement on columns
     required = ["Asset Type", "Full Name", "Asset Id"]
     require_columns(df, required, file.name)
 
-    # Normalize Asset Type for strict equality checks (keep original values)
     atype_norm = df["Asset Type"].map(lambda x: str(x).strip().casefold() if isinstance(x, str) else x)
-
-    # Partition tables and columns strictly
     tables = df[atype_norm == "table"].copy()
     columns = df[atype_norm == "column"].copy()
 
-    # Validate Table uniqueness (no conflicting Asset Ids per Table Full Name)
     ensure_no_conflicting_table_ids(tables, file.name)
 
-    # Build lookup: Table Full Name -> Asset Id
     table_map = (
         tables[["Full Name", "Asset Id"]]
-        .dropna(subset=["Full Name"])  # Full Name must exist
+        .dropna(subset=["Full Name"])
         .drop_duplicates(subset=["Full Name"])
         .set_index("Full Name")["Asset Id"]
         .to_dict()
     )
 
-    # Derive each Column's Table Full Name and map to the Table's Asset Id
-    derived_table_full = []
+    # Build the mapping without persisting derived name to output
+    rel_asset_ids = []
     for idx, val in columns["Full Name"].items():
-        derived_table_full.append(derive_table_full_name(val, file.name, idx))
-    columns["__Derived Table Full Name__"] = derived_table_full
+        derived_table_name = derive_table_full_name(val, file.name, idx)
+        rel_asset_ids.append(table_map.get(derived_table_name, None))
 
-    rel_asset_id = columns["__Derived Table Full Name__"].map(table_map)
-
-    # Create output with required relationship column
     out = columns.copy()
-    out["[Column] is part of [Table] > Asset Id"] = rel_asset_id
+    out["[Column] is part of [Table] > Asset Id"] = rel_asset_ids
 
-    # Drop helper / unwanted rows and columns
-    # 1) Drop all rows where Asset Type == 'Table' (already filtered by using 'columns')
-    # 2) Drop columns that are entirely empty
+    # Drop all-empty columns
     out = out.loc[:, out.notna().any(axis=0)]
 
     # Save per-file output
@@ -99,9 +79,8 @@ def process_file(file: Path):
     out_path = f"{rels_dir}{base}_relationships_by_assetid.xlsx"
     out.to_excel(out_path, index=False)
 
-    # Summary
     total_cols = len(out)
-    populated = out["[Column] is part of [Table] > Asset Id"].notna().sum() if "[Column] is part of [Table] > Asset Id" in out.columns else 0
+    populated = out["[Column] is part of [Table] > Asset Id"].notna().sum()
     print(f"  → Relationships file: {Path(out_path).name}")
     print(f"    Rows (Column assets only): {total_cols}")
     print(f"    '[Column] is part of [Table] > Asset Id' populated: {populated}/{total_cols}")
