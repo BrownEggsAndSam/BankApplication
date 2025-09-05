@@ -1,212 +1,249 @@
-ChatGPT said:
-JIRA Story: Add Physical Model to Domain & Full Name to Prevent Overwrites in Target Physical Data Dictionary
-Summary
-
-Update the “Target Physical Data Dictionary” community so domains and asset Full Name values include Physical Model Name, preventing table/column overwrites when different physical models reuse the same table name within the same container.
-
-Description (Problem + What to Build)
-
-Current state
-
-Community: Target Physical Data Dictionary
-
-Domain naming: {CMDB Asset ID}.{Container Type} under subcommunity {CMDB Asset ID}
-
-Full Name patterns:
-
-Table: {CMDB Asset ID}.{Container Type}.{Table_Name}
-
-Column: {CMDB Asset ID}.{Container Type}.{Table_Name}.{Column Name}
-
-Issue: If two different physical models have the same {Table_Name} in the same {Container Type}, ingesting the second model overwrites the first asset because the Full Name collides.
-
-Target state
-
-Domain naming becomes:
-{CMDB Asset ID}.{Physical Model Name}.{Container Type}
-
-Full Name patterns become:
-
-Table: {CMDB Asset ID}.{Physical Model Name}.{Container Type}.{Table_Name}
-
-Column: {CMDB Asset ID}.{Physical Model Name}.{Container Type}.{Table_Name}.{Column Name}
-
-Outcome: Assets from distinct physical models no longer collide; each model lives in its own domain and has unique Full Names.
-
-Scope of this story
-
-Implement new Domain Builder logic that includes Physical Model Name.
-
-Implement new Full Name Constructor for Table and Column assets.
-
-Modify ingest/update logic to enforce uniqueness using the new pattern and never overwrite assets from other physical models.
-
-Run one ingest for each of the 5 attached files (each file = distinct physical model), resulting in 5 domains with the following expected table counts:
-
-CMI_AWS_PDD_1_METADATA_FINAL → 396
-
-CMI_AWS_PDD_ET0BOP_PDD_1_METADATA_FINAL → 106
-
-CMI_AWS_PDD_ET0EUCP_PDD_1_METADATA_FINAL → 4
-
-CMI_AWS_PDD_ET0MSTRP_PDD_1_METADATA_FINAL → 100
-
-CMI_AWS_PDD_ET0STGP_PDD_1_METADATA_FINAL → 186
-
-Total tables expected across 5 domains: 792
-
-Backward-compatibility handling for any legacy assets (no deletes in this story; mark legacy pattern as deprecated via a property and preserve relationships).
-
-Assumptions
-
-Physical Model Name for a load is taken from the source file’s base name (without extension) exactly as provided above.
-
-“Container Type” strings remain unchanged (no dots introduced).
-
-Dots (.) remain the delimiter in Full Name. Underscores in model names are allowed.
-
-Case-insensitive comparisons; trim surrounding whitespace during construction.
-
-Out of scope
-
-Deleting or renaming any legacy domains/assets.
-
-Changing any Business Glossary linkages beyond re-pointing by Full Name during ingest.
-
-UI changes in Collibra; this is loader/workflow/config + metadata policy work.
-
-Acceptance Criteria (Functions that work)
-
-Domain Builder works
-
-Given {CMDB Asset ID}, {Physical Model Name}, {Container Type}, the system creates or reuses domain {CMDB Asset ID}.{Physical Model Name}.{Container Type} under the correct community hierarchy.
-
-Domain creation is idempotent (re-running does not create duplicates).
-
-Table Full Name Constructor works
-
-For each table row, the constructed Full Name equals
-{CMDB Asset ID}.{Physical Model Name}.{Container Type}.{Table_Name}.
-
-Names are trimmed; multiple spaces collapse to single; no leading/trailing dots.
-
-Column Full Name Constructor works
-
-For each column row, the constructed Full Name equals
-{CMDB Asset ID}.{Physical Model Name}.{Container Type}.{Table_Name}.{Column Name}.
-
-Column’s is part of relationship correctly targets the Table asset created with the new Full Name.
-
-Uniqueness & No-Overwrite works
-
-When two different physical models contain the same {Table_Name} for the same {Container Type}, ingest creates two distinct Table assets (one per model) and does not overwrite either.
-
-Re-running the same file updates only its own model’s assets (no cross-model updates).
-
-Counts per Domain work
-
-After ingest:
-
-Domain for CMI_AWS_PDD_1_METADATA_FINAL contains 396 table assets.
-
-Domain for CMI_AWS_PDD_ET0BOP_PDD_1_METADATA_FINAL contains 106 table assets.
-
-Domain for CMI_AWS_PDD_ET0EUCP_PDD_1_METADATA_FINAL contains 4 table assets.
-
-Domain for CMI_AWS_PDD_ET0MSTRP_PDD_1_METADATA_FINAL contains 100 table assets.
-
-Domain for CMI_AWS_PDD_ET0STGP_PDD_1_METADATA_FINAL contains 186 table assets.
-
-Collision Guard works
-
-If a would-be Full Name equals an existing asset from a different model, loader raises a collision warning and continues (no overwrites). The conflicting record is logged with file name, row number, and computed Full Name.
-
-Logging & Audit work
-
-Loader output reports, per file: domains created/reused, tables created/updated, columns created/updated, relationships created, and any collisions/warnings.
-
-A CSV log is produced and attached to the JIRA or stored in the designated logs location.
-
-Legacy Asset Protection works
-
-Any pre-existing assets with the old Full Name pattern are left intact.
-
-If an old-pattern asset corresponds to a new-pattern asset, both can co-exist; the loader sets a property on the new asset: Legacy Full Name = {old pattern} when determinable.
-
-Search & Reference work
-
-Searching by {CMDB Asset ID}, {Physical Model Name}, {Table_Name} returns only assets within that model’s domain (e.g., a search filtered to model = CMI_AWS_PDD_ET0BOP_PDD_1_METADATA_FINAL returns its 106 tables).
-
-Idempotent Re-run works
-
-Re-running a file produces 0 overwrites outside its model and consistent counts within its own domain.
-
-Deliverables
-
-Updated loader/workflow/config implementing the new Domain and Full Name patterns.
-
-Configuration or code for sanitization/normalization (trim, collapse spaces).
-
-Uniqueness enforcement (by Full Name) at Table & Column levels under the new scheme.
-
-One execution per attached file with logs.
-
-Brief runbook (1–2 pages) explaining the new patterns and how to validate.
-
-Validation Steps (QA Checklist)
-
-Ingest each of the 5 files individually; confirm the domain is {CMDB Asset ID}.{Physical Model Name}.{Container Type}.
-
-For each domain, verify table counts match AC #5 (396 / 106 / 4 / 100 / 186).
-
-Spot-check 5 random tables per domain and 5 random columns under each: verify Full Name string follows new pattern and relationships resolve to the correct parent table.
-
-Re-ingest one file and confirm no cross-model updates and counts remain stable.
-
-Attempt a synthetic collision (same table name across models) and confirm no overwrite; collision logged.
-
-Technical Notes / Implementation Details
-
-Extract Physical Model Name: Use source file base name (e.g., CMI_AWS_PDD_ET0BOP_PDD_1_METADATA_FINAL).
-
-Full Name delimiter: . between segments; do not replace underscores within segments.
-
-Normalization: trim(), collapse multiple whitespace to single space in segment names; strip delimiter artifacts.
-
-Idempotency: Use deterministic lookups by the new Full Name (and domain) when deciding create vs update.
-
-Legacy handling: If the old Full Name can be computed from inputs, populate Legacy Full Name on the new asset for traceability.
-
-Safety: No deletes in this story.
-
-Sub-Tasks
-
-Update Domain Builder to include {Physical Model Name}.
-
-Update Full Name constructors for Table and Column assets.
-
-Update ingest/upsert logic to key by new Full Name and domain; prevent cross-model overwrites.
-
-Add collision detection + structured logging (CSV).
-
-Run ingest for the 5 files; attach logs and screenshots of counts.
-
-Write mini runbook + update Confluence documentation.
-
-Risks & Mitigations
-
-Downstream dependencies expecting old Full Names → Mitigation: keep legacy assets intact; add Legacy Full Name property on new assets; communicate change.
-
-Special characters in model/table/column names → Mitigation: trim/collapse spaces; maintain underscores; reject or log on invalid delimiter usage if encountered.
-
-Human error in file/model mapping → Mitigation: model name pulled directly from file base name to reduce manual entry.
-
-Definition of Done
-
-All Acceptance Criteria pass.
-
-5 domains created with verified table counts (396 / 106 / 4 / 100 / 186).
-
-No overwrite incidents across models; collisions (if any) logged.
-
-Documentation/runbook published and linked to the story.
+#!/usr/bin/env python3
+"""
+Excel ➜ SQL INSERT generator
+
+Purpose
+-------
+Read an Excel file and emit batched INSERT statements to load an existing table
+(default: glossary_history_table). Dialect-aware identifier quoting. Sensible
+NULL / string escaping. Optionally wrap in a transaction.
+
+Quick start
+-----------
+1) Put your Excel file in: ./__excelToSQL/input/
+2) Run:
+   python excel_to_sql_glossary_history_table.py \
+     --excel "MyData.xlsx" \
+     --sheet "Sheet1" \
+     --table "glossary_history_table" \
+     --dialect postgres
+3) The .sql file will be written to: ./__excelToSQL/output/
+
+Defaults
+--------
+- Dialect: postgres (identifier quotes with ")
+- Table: glossary_history_table
+- One sheet: first sheet if --sheet not provided
+- Batch size: 1000 rows per INSERT
+- Trim strings, convert empty strings to NULL
+- Values are escaped using doubled single quotes
+- Wrap in a single transaction (BEGIN/COMMIT)
+
+Change these via CLI flags below or by editing the DEFAULTS section.
+"""
+
+from __future__ import annotations
+import argparse
+import os
+from pathlib import Path
+from typing import Iterable, List
+from datetime import date, datetime
+from decimal import Decimal
+
+import numpy as np
+import pandas as pd
+
+# -------------------------
+# DEFAULTS (can be overridden via CLI)
+# -------------------------
+PROJECT_NAME = "__excelToSQL"
+package_input_path = f"./{PROJECT_NAME}/input/"
+package_output_path = f"./{PROJECT_NAME}/output/"
+
+DEFAULT_TABLE = "glossary_history_table"
+DEFAULT_DIALECT = "postgres"  # one of: postgres | sqlserver | mysql | snowflake | oracle | sqlite | none
+DEFAULT_BATCH_SIZE = 1000
+DEFAULT_WRAP_IN_TX = True
+TRIM_STRINGS = True
+EMPTY_STRING_AS_NULL = True
+
+# -------------------------
+# Helpers
+# -------------------------
+
+def trim_all_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Trim whitespace on string-like cells across entire DataFrame."""
+    def _trim(x):
+        if isinstance(x, str):
+            s = x.strip()
+            if EMPTY_STRING_AS_NULL and s == "":
+                return np.nan
+            return s
+        return x
+    return df.applymap(_trim)
+
+
+def list_excels_in(path: str) -> List[str]:
+    exts = (".xlsx", ".xlsm", ".xltx", ".xls", ".xlsb")
+    return [f for f in os.listdir(path) if f.lower().endswith(exts)]
+
+
+def pick_excel_or_raise(path: str, explicit: str | None) -> str:
+    if explicit:
+        return explicit
+    files = list_excels_in(path)
+    if not files:
+        raise FileNotFoundError(
+            f"No Excel files found in {path}. Provide --excel or add a file there.")
+    if len(files) > 1:
+        raise ValueError(
+            f"Multiple Excel files found in {path}: {files}. Specify one with --excel.")
+    return files[0]
+
+
+def quote_ident(name: str, dialect: str) -> str:
+    if dialect == "sqlserver":
+        return f"[{name}]"
+    if dialect == "mysql":
+        return f"`{name}`"
+    if dialect in {"postgres", "snowflake", "oracle", "sqlite"}:
+        return f'"{name}"'
+    # none: no quoting
+    return name
+
+
+def escape_string(val: str) -> str:
+    # Double any single quotes for SQL literal safety
+    return val.replace("'", "''")
+
+
+def format_literal(val, dialect: str) -> str:
+    """Convert a Python/NumPy/Pandas scalar to a SQL literal string (including quotes/NULL)."""
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return "NULL"
+
+    # Pandas NA types
+    try:
+        import pandas as _pd  # noqa
+        if pd.isna(val):
+            return "NULL"
+    except Exception:
+        pass
+
+    # Datetime / Date
+    if isinstance(val, (datetime, pd.Timestamp)):
+        # Normalize to second precision for tidy SQL
+        dt = pd.Timestamp(val).to_pydatetime().replace(tzinfo=None)
+        return f"'{dt.strftime('%Y-%m-%d %H:%M:%S')}'"
+    if isinstance(val, date):
+        return f"'{val.strftime('%Y-%m-%d')}'"
+
+    # Boolean
+    if isinstance(val, (bool, np.bool_)):
+        if dialect in {"sqlserver", "mysql"}:
+            return "1" if bool(val) else "0"
+        return "TRUE" if bool(val) else "FALSE"
+
+    # Numbers
+    if isinstance(val, (int, np.integer)):
+        return str(int(val))
+    if isinstance(val, (float, np.floating)):
+        if np.isfinite(val):
+            # Avoid scientific notation for most DBs
+            return ("{0:.15g}").format(float(val))
+        return "NULL"
+    if isinstance(val, Decimal):
+        return format(val, 'f')
+
+    # Everything else -> treat as string
+    sval = str(val)
+    if TRIM_STRINGS:
+        sval = sval.strip()
+    if EMPTY_STRING_AS_NULL and sval == "":
+        return "NULL"
+    return f"'{escape_string(sval)}'"
+
+
+def chunk_iterable(n: int, total: int) -> Iterable[range]:
+    start = 0
+    while start < total:
+        end = min(start + n, total)
+        yield range(start, end)
+        start = end
+
+
+def build_insert_sql(table: str, columns: List[str], values_rows: List[List[str]], dialect: str) -> str:
+    quoted_cols = ", ".join(quote_ident(c, dialect) for c in columns)
+    values_sql = ",\n  ".join("(" + ", ".join(row) + ")" for row in values_rows)
+    return f"INSERT INTO {quote_ident(table, dialect)} ({quoted_cols})\nVALUES\n  {values_sql};\n"
+
+
+# -------------------------
+# Main runner
+# -------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Excel ➜ SQL INSERT generator")
+    parser.add_argument("--excel", help="Excel filename in input folder (or absolute path)")
+    parser.add_argument("--sheet", help="Excel sheet name (default: first sheet)")
+    parser.add_argument("--table", default=DEFAULT_TABLE, help="Target table name")
+    parser.add_argument("--dialect", default=DEFAULT_DIALECT,
+                        choices=["postgres", "sqlserver", "mysql", "snowflake", "oracle", "sqlite", "none"],
+                        help="SQL dialect for identifier quoting and boolean formatting")
+    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE,
+                        help="Rows per INSERT batch")
+    parser.add_argument("--no-transaction", action="store_true", help="Do not wrap in BEGIN/COMMIT")
+    parser.add_argument("--project", default=PROJECT_NAME, help="Project folder name (for input/output roots)")
+
+    args = parser.parse_args()
+
+    # Resolve IO paths
+    in_root = Path(f"./{args.project}/input/")
+    out_root = Path(f"./{args.project}/output/")
+    out_root.mkdir(parents=True, exist_ok=True)
+
+    # Determine Excel path
+    if args.excel and os.path.isabs(args.excel):
+        excel_path = Path(args.excel)
+        if not excel_path.exists():
+            raise FileNotFoundError(f"Excel not found: {excel_path}")
+    else:
+        excel_name = pick_excel_or_raise(str(in_root), args.excel)
+        excel_path = in_root / excel_name
+
+    print(f"[INFO] Reading Excel: {excel_path}")
+    # Read Excel (sheet=0 means first sheet)
+    sheet_to_use = args.sheet if args.sheet else 0
+    df = pd.read_excel(excel_path, sheet_name=sheet_to_use)
+
+    # Standardize & clean
+    if TRIM_STRINGS:
+        df = trim_all_columns(df)
+
+    # Ensure column order is preserved from Excel
+    columns = [str(c) for c in df.columns]
+    print(f"[INFO] Columns ({len(columns)}): {columns}")
+    print(f"[INFO] Rows: {len(df)}")
+
+    # Prepare output file
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_file = out_root / f"{args.table}_{ts}.sql"
+
+    wrap_tx = not args.no_transaction
+
+    emitted_rows = 0
+    with out_file.open("w", encoding="utf-8") as f:
+        if wrap_tx:
+            f.write("BEGIN;\n\n")
+        # Write batched INSERTs
+        total_rows = len(df)
+        if total_rows == 0:
+            print("[WARN] No data rows found. Emitting empty transaction file.")
+        for batch_range in chunk_iterable(args.batch_size, total_rows):
+            batch_values: List[List[str]] = []
+            for r in batch_range:
+                row = df.iloc[r]
+                vals = [format_literal(row[c], args.dialect) for c in df.columns]
+                batch_values.append(vals)
+            sql = build_insert_sql(args.table, columns, batch_values, args.dialect)
+            f.write(sql + "\n")
+            emitted_rows += len(batch_values)
+            print(f"[INFO] Emitted rows: {emitted_rows}/{total_rows}")
+        if wrap_tx:
+            f.write("COMMIT;\n")
+
+    print(f"[OK] Wrote SQL to: {out_file}")
+
+
+if __name__ == "__main__":
+    main()
