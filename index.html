@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Role Reality Check</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #61707f;
+      --paper: #f7f5ef;
+      --white: #ffffff;
+      --teal: #147a7e;
+      --coral: #d65f4a;
+      --gold: #c99828;
+      --green: #637f4f;
+      --line: rgba(23, 33, 43, 0.14);
+      --shadow: 0 22px 70px rgba(23, 33, 43, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(20,122,126,.06) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(20,122,126,.05) 1px, transparent 1px),
+        var(--paper);
+      background-size: 34px 34px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .deck {
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: clamp(30px, 5vw, 66px);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(36px) scale(.985);
+      transition: opacity .28s ease, transform .28s ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0) scale(1);
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      pointer-events: none;
+    }
+
+    .kicker {
+      color: var(--teal);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 {
+      max-width: 980px;
+      font-size: clamp(56px, 8vw, 116px);
+      line-height: .92;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      max-width: 1060px;
+      font-size: clamp(38px, 5vw, 74px);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      font-size: clamp(21px, 2.4vw, 34px);
+      line-height: 1.1;
+    }
+
+    .lead {
+      max-width: 920px;
+      color: var(--muted);
+      font-size: clamp(20px, 2vw, 31px);
+      line-height: 1.25;
+    }
+
+    .content {
+      min-height: 0;
+      display: grid;
+      align-content: center;
+      gap: 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+      gap: clamp(24px, 4vw, 56px);
+      align-items: center;
+    }
+
+    .three {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel, .metric, .photo-card, .evidence-card {
+      background: rgba(255,255,255,.82);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 12px 40px rgba(23, 33, 43, .08);
+    }
+
+    .panel { padding: clamp(18px, 2vw, 28px); }
+    .panel p, .panel li {
+      color: var(--muted);
+      font-size: clamp(17px, 1.45vw, 23px);
+      line-height: 1.36;
+    }
+
+    .panel strong { color: var(--ink); }
+    .panel ul { margin: 16px 0 0; padding-left: 22px; }
+    .panel li + li { margin-top: 10px; }
+
+    .detail-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .detail {
+      padding: 16px;
+      border: 1px dashed rgba(20, 122, 126, .42);
+      border-radius: 8px;
+      background: rgba(255,255,255,.68);
+    }
+
+    .detail b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--teal);
+      font-size: 15px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .detail span {
+      color: var(--muted);
+      font-size: clamp(16px, 1.35vw, 21px);
+      line-height: 1.32;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 750;
+    }
+
+    .accent, .coral { color: var(--coral); }
+    .gold { color: var(--gold); }
+    .teal { color: var(--teal); }
+    .green { color: var(--green); }
+
+    .hero-mark {
+      position: absolute;
+      right: clamp(40px, 8vw, 120px);
+      bottom: clamp(70px, 12vh, 150px);
+      color: rgba(214, 95, 74, .12);
+      font-size: clamp(130px, 20vw, 260px);
+      font-weight: 900;
+      line-height: 1;
+      z-index: 0;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 16px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+      padding: 17px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .event:first-child { border-top: 0; }
+    .date {
+      color: var(--teal);
+      font-size: 16px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .event p {
+      color: var(--muted);
+      font-size: clamp(18px, 1.65vw, 25px);
+      line-height: 1.28;
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .photo-card {
+      overflow: hidden;
+      min-height: 430px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-card.family img { object-position: center 42%; }
+    .photo-card.partner img { object-position: center 36%; }
+
+    .caption {
+      padding: 14px 16px;
+      background: var(--white);
+      border-top: 1px solid var(--line);
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric {
+      padding: 20px;
+      min-height: 142px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .metric b {
+      font-size: clamp(32px, 4vw, 62px);
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.22;
+    }
+
+    .role-map {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .lane {
+      min-height: 230px;
+      padding: 18px;
+      border-radius: 8px;
+      background: var(--white);
+      border: 1px solid var(--line);
+      display: grid;
+      align-content: start;
+      gap: 13px;
+    }
+
+    .lane .num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--white);
+      background: var(--teal);
+      font-weight: 900;
+    }
+
+    .lane:nth-child(2) .num { background: var(--coral); }
+    .lane:nth-child(3) .num { background: var(--gold); }
+    .lane:nth-child(4) .num { background: var(--green); }
+    .lane:nth-child(5) .num { background: var(--ink); }
+
+    .lane p {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.27;
+    }
+
+    .initiative-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .initiative {
+      min-height: 118px;
+      padding: 18px;
+      border-radius: 8px;
+      color: var(--white);
+      background: var(--ink);
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+      box-shadow: 0 12px 36px rgba(23, 33, 43, .14);
+    }
+
+    .initiative:nth-child(2), .initiative:nth-child(6) { background: var(--teal); }
+    .initiative:nth-child(3), .initiative:nth-child(7) { background: var(--coral); }
+    .initiative:nth-child(4), .initiative:nth-child(8) { background: var(--green); }
+    .initiative small { color: rgba(255,255,255,.78); font-size: 13px; }
+    .initiative b { font-size: clamp(18px, 1.8vw, 26px); line-height: 1.05; }
+
+    .compare {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 78px minmax(0, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      color: var(--coral);
+      font-size: 54px;
+      font-weight: 900;
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      max-height: 55vh;
+      overflow: hidden;
+    }
+
+    .evidence-card {
+      overflow: hidden;
+      min-height: 145px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .evidence-card img {
+      width: 100%;
+      height: 118px;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+      filter: saturate(.95) contrast(1.03);
+    }
+
+    .evidence-card span {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--white);
+      border-top: 1px solid var(--line);
+    }
+
+    .footer {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .controls {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 28px rgba(23, 33, 43, .12);
+      font-size: 21px;
+      font-weight: 850;
+    }
+
+    .counter {
+      min-width: 74px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 28px rgba(23, 33, 43, .10);
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .progress {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      height: 5px;
+      width: 100%;
+      z-index: 11;
+      background: rgba(23, 33, 43, .08);
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--teal), var(--coral), var(--gold));
+      transition: width .25s ease;
+    }
+
+    .notes {
+      position: fixed;
+      left: 22px;
+      right: 22px;
+      bottom: 80px;
+      z-index: 20;
+      display: none;
+      max-height: 30vh;
+      overflow: auto;
+      padding: 18px 20px;
+      border-radius: 8px;
+      background: rgba(23, 33, 43, .95);
+      color: var(--white);
+      box-shadow: var(--shadow);
+      font-size: 17px;
+      line-height: 1.36;
+    }
+
+    .notes.open { display: block; }
+    .notes b { color: #f7d487; }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .deck { height: auto; min-height: 100vh; }
+      .slide {
+        position: relative;
+        min-height: 100vh;
+        display: none;
+        padding: 24px;
+      }
+      .slide.active { display: grid; }
+      .two, .photo-grid, .compare { grid-template-columns: 1fr; }
+      .three, .metrics, .role-map, .initiative-grid, .evidence-grid, .detail-list { grid-template-columns: 1fr 1fr; }
+      .arrow { transform: rotate(90deg); min-height: 60px; }
+      .photo-card { min-height: 320px; }
+    }
+
+    @media print {
+      body { overflow: visible; background: var(--paper); }
+      .deck { height: auto; }
+      .slide {
+        position: relative;
+        page-break-after: always;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        min-height: 100vh;
+      }
+      .controls, .progress, .notes { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-live="polite">
+    <section class="slide active" data-notes="Open calmly: this is a classification conversation, not a compensation argument. You are asking the Director to compare the role being performed against the role you are classified in.">
+      <div class="kicker">Director conversation</div>
+      <div class="content">
+        <div class="hero-mark">01</div>
+        <h1>Role Reality Check</h1>
+        <p class="lead">A conversation about aligning my classification to the role I am already performing: data governance, product delivery, analytics, automation, and technical enablement.</p>
+        <div class="chips">
+          <span class="chip">Classification first</span>
+          <span class="chip">Evidence-led</span>
+          <span class="chip">Context included</span>
+          <span class="chip">Not a merit pitch</span>
+        </div>
+      </div>
+      <div class="footer"><span>Prepared as a working draft</span><span>Use arrows to navigate · N toggles notes</span></div>
+    </section>
+
+    <section class="slide" data-notes="This is the frame. Keep the tone composed: you love the work and want alignment. Avoid sounding like the company is bad; the mismatch is the problem.">
+      <div class="kicker">The frame</div>
+      <div class="content two">
+        <div>
+          <h2>I am not asking to be rewarded for potential.</h2>
+          <p class="lead">I am asking to be evaluated against the work I am already trusted to perform.</p>
+        </div>
+        <div class="panel">
+          <ul>
+            <li><strong>My current work is blended.</strong> I operate across governance, analytics, workflow design, stakeholder translation, and technical delivery.</li>
+            <li><strong>The market pays for that blend differently.</strong> The skill stack is no longer administrative or single-lane governance support.</li>
+            <li><strong>The ask is alignment.</strong> Title, level, and compensation should reflect the function the team already relies on.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: current title, current band, proposed target role family</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="You can say: remote work can make people flatten you into deliverables. This slide is to put a person back in the room. Keep private details brief unless the Director asks.">
+      <div class="kicker">Who is behind the screen</div>
+      <div class="content">
+        <h2>Remote work can flatten a person into deliverables.</h2>
+        <div class="photo-grid">
+          <figure class="photo-card family">
+            <img src="Photos/Mom_Brother_Grandma_Me_-_Mom_Grad.jpg" alt="Family at graduation">
+            <figcaption class="caption">My home team: mom, brother, grandma, and me. A lot of my remote life is also caregiving, stability, and being present when it matters.</figcaption>
+          </figure>
+          <figure class="photo-card partner">
+            <img src="Photos/Helia and I.jpeg" alt="Sam and Helia">
+            <figcaption class="caption">My Philadelphia chapter: Helia keeps raising my standard for the life I am trying to build.</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="footer"><span>Personal context, not a detour</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This is where you can decide your disclosure level. Possible spoken version: 'I carry meaningful family health, caregiving, and financial responsibilities. I do not want those to be the basis of a business decision, but they explain why I need the role conversation to be direct and timely.'">
+      <div class="kicker">Why this feels urgent</div>
+      <div class="content two">
+        <div>
+          <h2>I love the work. The mismatch is what is unsustainable.</h2>
+          <p class="lead">The work gives me energy. The classification gap, financial pressure, and lack of market alignment are what are draining me.</p>
+        </div>
+        <div class="three">
+          <div class="panel">
+            <h3 class="teal">Home</h3>
+            <p>I support a household with real caregiving, health, and financial responsibilities.</p>
+          </div>
+          <div class="panel">
+            <h3 class="coral">Future</h3>
+            <p>I want the freedom to build a life with my partner without feeling trapped between obligations and ambition.</p>
+          </div>
+          <div class="panel">
+            <h3 class="gold">Work</h3>
+            <p>I have grown into a technical backbone role, but my classification has not moved with the work.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: keep this slide concise; exact hardship details belong in speaker notes only</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="Fun origin-story slide. Keep it human: biology major, expected doctor path, discovered Excel automation, realized there was a career in making work smarter.">
+      <div class="kicker">Origin story</div>
+      <div class="content two">
+        <div>
+          <h2>Biology major. Almost doctor. Definitely the spreadsheet kid.</h2>
+          <p class="lead">I found Corporate America through a call center and learned that repetitive work could be turned into systems.</p>
+        </div>
+        <div class="timeline panel">
+          <div class="event">
+            <div class="date">College</div>
+            <p>Biology path, with the familiar expectation that medicine was the destination.</p>
+          </div>
+          <div class="event">
+            <div class="date">CoStar</div>
+            <p>Call center work became a lab for Excel automation, process fixes, and curiosity.</p>
+          </div>
+          <div class="event">
+            <div class="date">Fannie Mae</div>
+            <p>Project Analyst opened the door. I suited up, learned fast, and started building a career from the inside.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>There is a career pattern here: learn, automate, translate, deliver</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This slide makes the first mismatch visible: the work started as operational support, then expanded into talent architecture and cross-training.">
+      <div class="kicker">Chapter 1 · 2019-2021</div>
+      <div class="content">
+        <h2>Project Analyst: from operational support to trusted organizer.</h2>
+        <div class="metrics">
+          <div class="metric"><b>$60k</b><span>Started in operational and administrative support.</span></div>
+          <div class="metric"><b>$72k</b><span>Expanded into cross-training and business-function coordination.</span></div>
+          <div class="metric"><b>GMU</b><span>Enrolled in Data Science while working to move closer to data.</span></div>
+          <div class="metric"><b>Data</b><span>Lateral move into Data Policy & Governance with Linda Yang.</span></div>
+        </div>
+        <div class="panel">
+          <p>Capital Markets mini conference, colo setup, PI planning, SERVE events, admin budgeting, talent architecture, and cross-functional training gave me the operating model of how teams actually move.</p>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: exact promotion dates, performance ratings, major stakeholder names</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="Linda gambled on your potential. Michael invested in knowing you as a person and valued your judgment. This slide establishes sponsorship and credibility.">
+      <div class="kicker">The data pivot</div>
+      <div class="content two">
+        <div>
+          <h2>I wanted to be where the data was.</h2>
+          <p class="lead">I entered Data Policy & Governance expecting a straight data path. It became something more useful: a place to understand the business, the data, and the friction between them.</p>
+        </div>
+        <div class="panel">
+          <ul>
+            <li><strong>Linda Yang</strong> took the gamble and brought me onto the Stewardship team.</li>
+            <li><strong>Michael</strong> built trust with me remotely and valued my opinion because I was close to the work.</li>
+            <li><strong>The pattern</strong> became clear: learn the business, find the friction, build a practical bridge.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: examples where judgment changed a decision or prevented rework</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This is an important turning point. Phrase it as initiative, not rebellion: you saw a manual problem and built a local prototype. It validated the team's logic and made you a useful stakeholder/tester/story creator.">
+      <div class="kicker">The builder switch flipped</div>
+      <div class="content compare">
+        <div class="panel">
+          <h3>Problem I saw</h3>
+          <p>Manual enablement work needed structure, repeatability, and fewer handoffs.</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="panel">
+          <h3>What I built</h3>
+          <p>A local Python workflow that paralleled what became the DSET Enablement and STTM utility path.</p>
+        </div>
+        <div class="panel">
+          <h3>Why it mattered</h3>
+          <p>The logic was nearly identical to the formal solution, which made me a valuable tester and Stewardship stakeholder.</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="panel">
+          <h3>What changed</h3>
+          <p>I became the person writing stories, translating requirements, and building a relationship with Sheeba's team.</p>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: screenshots, before/after process steps, cycle-time saved</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="Be playful here but precise. You can say: I said yes before I was fully ready, then did the work to become ready. The point is learning velocity and ownership.">
+      <div class="kicker">Chapter 2 · 2023</div>
+      <div class="content two">
+        <div>
+          <h2>PowerBI, Unqork, Appian: I became the translation layer.</h2>
+          <p class="lead">When the work shifted, I learned fast enough to support both the business intent and the technical delivery path.</p>
+        </div>
+        <div class="panel">
+          <ul>
+            <li>Supported DGCE migration thinking from PowerBI into Unqork.</li>
+            <li>Worked with Madhu to create and vet pieces from scratch.</li>
+            <li>Carried forward institutional knowledge as Appian entered the picture.</li>
+            <li>Became a frequent source for Jonathan's questions while Gabe remained the primary PoC.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: Unqork/Appian artifacts, releases supported, questions routed through you</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This should connect your Tableau/metrics work to AI readiness. Your strongest point: code is the language you use to translate team work into durable systems.">
+      <div class="kicker">Metrics, automation, AI readiness</div>
+      <div class="content">
+        <h2>I do more than report metrics. I encode the logic behind them.</h2>
+        <div class="three">
+          <div class="panel">
+            <h3 class="teal">Tableau PoC</h3>
+            <p>I create and automate metrics so the team can audit, explain, and reuse them.</p>
+          </div>
+          <div class="panel">
+            <h3 class="coral">DGCE logic</h3>
+            <p>I often own or translate the logic behind DGCE metrics with Connor, Sangi, and partners.</p>
+          </div>
+          <div class="panel">
+            <h3 class="gold">AI turn</h3>
+            <p>The easiest language for AI is code. I speak it, and I translate our team's work into it.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: metric inventory, dashboards, refresh logic, audit examples</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This slide captures major Stewardship evidence. Add exact numbers from your work laptop later: number of attributes created, forms reviewed, mapping files, ticket counts, awards.">
+      <div class="kicker">Stewardship impact</div>
+      <div class="content two">
+        <div>
+          <h2>Before the move, I was already delivering at senior scope.</h2>
+          <p class="lead">UAD, CUCLA, CDDS, and NPI work became proof that I could handle complex data domains and technical implementation support.</p>
+        </div>
+        <div class="timeline panel">
+          <div class="event">
+            <div class="date">UAD 2.6 → 3.6</div>
+            <p>Read forms, MISMO documentation, mappings, and created thousands of attributes in support of UAD 3.6.</p>
+          </div>
+          <div class="event">
+            <div class="date">Closeout</div>
+            <p>Worked with Sherry Jin, Noah, and Ed to finish CUCLA and CDDS technical debt.</p>
+          </div>
+          <div class="event">
+            <div class="date">NPI</div>
+            <p>Built custom similarity-matching scripts for Privacy Office work with Elisa and the dev team, earning a Strong BEAT award.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: counts, dates, awards, artifacts</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This is the bridge into the current team. Keep it factual: by April 2025 you were pulled full time, and the work list expanded across critical initiatives.">
+      <div class="kicker">Chapter 3 · April 2025 onward</div>
+      <div class="content">
+        <h2>I moved full-time because the work already depended on me.</h2>
+        <div class="initiative-grid">
+          <div class="initiative"><small>Registration</small><b>Express Registration</b></div>
+          <div class="initiative"><small>Enablement</small><b>Dataset Enablement</b></div>
+          <div class="initiative"><small>Privacy</small><b>PDC / NPI</b></div>
+          <div class="initiative"><small>Discovery</small><b>Unstructured Files</b></div>
+          <div class="initiative"><small>Integration</small><b>Collibra to PDC</b></div>
+          <div class="initiative"><small>Integration</small><b>Collibra to KE</b></div>
+          <div class="initiative"><small>Workflow</small><b>Collibra Workflows</b></div>
+          <div class="initiative"><small>AI</small><b>Agents</b></div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: owner, role, status, impact, and proof for each initiative</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This is probably the strongest business slide. The role is blended across five lanes. Pause here and let the Director react.">
+      <div class="kicker">Current-state role map</div>
+      <div class="content">
+        <h2>The role I perform is blended technical delivery.</h2>
+        <div class="role-map">
+          <div class="lane"><div class="num">1</div><h3>Governance</h3><p>Policy, stewardship context, Collibra domain understanding, controls, and lineage thinking.</p></div>
+          <div class="lane"><div class="num">2</div><h3>Product</h3><p>Stories, requirements, PoC partnership, UAT, stakeholder translation, delivery judgment.</p></div>
+          <div class="lane"><div class="num">3</div><h3>Analytics</h3><p>Tableau, metrics logic, auditing enablement, reporting automation, data explanation.</p></div>
+          <div class="lane"><div class="num">4</div><h3>Engineering</h3><p>Python scripts, workflow logic, prototyping, implementation partnership, reusable solutions.</p></div>
+          <div class="lane"><div class="num">5</div><h3>AI Enablement</h3><p>Turning messy team work into code-shaped instructions, agents, structured logic, and automation-ready flows.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: map each lane to official job-family language</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This slide is for your work-laptop pass. You do not need to present every detail; use it as a collection checklist, then decide what becomes visible evidence versus backup appendix.">
+      <div class="kicker">Evidence to add</div>
+      <div class="content">
+        <h2>Where more detail will make the case sharper.</h2>
+        <div class="detail-list">
+          <div class="detail"><b>Scope proof</b><span>For each initiative, capture your role, dates, stakeholders, deliverables, and whether you led, built, translated, tested, or owned logic.</span></div>
+          <div class="detail"><b>Impact proof</b><span>Add before/after examples: hours saved, cycle time reduced, defects prevented, manual steps removed, audit quality improved, or adoption enabled.</span></div>
+          <div class="detail"><b>Technical proof</b><span>Show scripts, workflow designs, Tableau logic, Appian/Unqork requirements, Collibra workflow artifacts, agents, or implementation notes.</span></div>
+          <div class="detail"><b>Recognition proof</b><span>Add Strong BEAT award, town hall shout-outs, stakeholder praise, performance review language, and messages that confirm trust or dependency.</span></div>
+          <div class="detail"><b>Role proof</b><span>Bring official job-family descriptions and market postings for roles blending governance, product, analytics, automation, and AI enablement.</span></div>
+          <div class="detail"><b>Compensation proof</b><span>Use salary bands or market ranges only after the role comparison is clear; classification drives the compensation discussion.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>This is the bridge between story and evidence packet</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="Use this to make the mismatch emotionally clear without sounding bitter. Your line: 'This is not about being unhappy with the work. It is about being misclassified relative to the work.'">
+      <div class="kicker">The mismatch</div>
+      <div class="content compare">
+        <div class="panel">
+          <h3>How the role may be viewed</h3>
+          <ul>
+            <li>Data Governance associate</li>
+            <li>Operational support</li>
+            <li>Helpful technical teammate</li>
+            <li>Strong individual contributor</li>
+          </ul>
+        </div>
+        <div class="arrow">≠</div>
+        <div class="panel">
+          <h3>What the role actually does</h3>
+          <ul>
+            <li>Technical product and workflow delivery</li>
+            <li>Analytics logic ownership</li>
+            <li>Automation and implementation support</li>
+            <li>Cross-team translation for strategic initiatives</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: current role description vs actual duties, side-by-side</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="This slide is a placeholder for stronger evidence from your work laptop. For now, the matrix screenshots show the deeper work-life source material. Add salary bands, market role titles, and screenshots here later.">
+      <div class="kicker">Market and role evidence</div>
+      <div class="content">
+        <h2>The market comparison should be against the blended skill set.</h2>
+        <div class="evidence-grid">
+          <div class="evidence-card"><img src="build_assets/IMG_8687.jpeg" alt="Job matrix screenshot 8687"><span>Job Matrix 01</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8688.jpeg" alt="Job matrix screenshot 8688"><span>Job Matrix 02</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8689.jpeg" alt="Job matrix screenshot 8689"><span>Job Matrix 03</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8690.jpeg" alt="Job matrix screenshot 8690"><span>Job Matrix 04</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8691.jpeg" alt="Job matrix screenshot 8691"><span>Job Matrix 05</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8692.jpeg" alt="Job matrix screenshot 8692"><span>Job Matrix 06</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8693.jpeg" alt="Job matrix screenshot 8693"><span>Job Matrix 07</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8694.jpeg" alt="Job matrix screenshot 8694"><span>Job Matrix 08</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8695.jpeg" alt="Job matrix screenshot 8695"><span>Job Matrix 09</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8696.jpeg" alt="Job matrix screenshot 8696"><span>Job Matrix 10</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8697.jpeg" alt="Job matrix screenshot 8697"><span>Job Matrix 11</span></div>
+          <div class="evidence-card"><img src="build_assets/IMG_8698.jpeg" alt="Job matrix screenshot 8698"><span>Job Matrix 12</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: salary bands, role postings, and internal job architecture screenshots</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="Here you make the ask cleanly. Do not apologize. Ask for a role evaluation, market alignment, and a near-term decision path.">
+      <div class="kicker">The ask</div>
+      <div class="content two">
+        <div>
+          <h2>I am asking for role alignment, not a pat on the back.</h2>
+          <p class="lead">Classify the role to match the function I perform today and the technical market I am operating in.</p>
+        </div>
+        <div class="panel">
+          <ul>
+            <li><strong>Evaluate my current scope</strong> against blended technical roles, not only traditional Data Governance ladders.</li>
+            <li><strong>Identify the right title and level</strong> for the work: technical product, data governance, analytics, automation, and AI enablement.</li>
+            <li><strong>Review compensation alignment</strong> against that role family and market band.</li>
+            <li><strong>Agree on a decision path</strong> with owners, artifacts needed, and timing.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer"><span>Add detail later: proposed timeline, named decision owners, artifacts you will provide</span><span></span></div>
+    </section>
+
+    <section class="slide" data-notes="End with warmth and confidence. Suggested close: 'I want to keep building here. I just need the company to recognize the role it is already receiving from me.'">
+      <div class="kicker">Close</div>
+      <div class="content">
+        <h2>I want to keep building here. I need the role to catch up to the work.</h2>
+        <p class="lead">The best outcome is simple: keep the momentum, keep the impact, and align my classification to the value and technical scope already being delivered.</p>
+        <div class="chips">
+          <span class="chip">I love the work</span>
+          <span class="chip">I am proud of the impact</span>
+          <span class="chip">I am ready for alignment</span>
+        </div>
+      </div>
+      <div class="footer"><span>Thank you</span><span></span></div>
+    </section>
+  </main>
+
+  <div class="controls" aria-label="Presentation controls">
+    <button class="icon-btn" type="button" id="prev" aria-label="Previous slide">‹</button>
+    <div class="counter" id="counter">1 / 18</div>
+    <button class="icon-btn" type="button" id="next" aria-label="Next slide">›</button>
+    <button class="icon-btn" type="button" id="notesBtn" aria-label="Toggle speaker notes">N</button>
+  </div>
+  <div class="notes" id="notes"></div>
+  <div class="progress"><span id="progress"></span></div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const counter = document.getElementById("counter");
+    const progress = document.getElementById("progress");
+    const notes = document.getElementById("notes");
+    const notesBtn = document.getElementById("notesBtn");
+    let current = 0;
+
+    function render() {
+      slides.forEach((slide, index) => slide.classList.toggle("active", index === current));
+      counter.textContent = `${current + 1} / ${slides.length}`;
+      progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+      const note = slides[current].dataset.notes || "";
+      notes.innerHTML = `<b>Speaker note:</b> ${note}`;
+    }
+
+    function go(delta) {
+      current = Math.min(slides.length - 1, Math.max(0, current + delta));
+      render();
+    }
+
+    document.getElementById("prev").addEventListener("click", () => go(-1));
+    document.getElementById("next").addEventListener("click", () => go(1));
+    notesBtn.addEventListener("click", () => notes.classList.toggle("open"));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") go(1);
+      if (event.key === "ArrowLeft" || event.key === "PageUp") go(-1);
+      if (event.key.toLowerCase() === "n") notes.classList.toggle("open");
+      if (event.key === "Home") { current = 0; render(); }
+      if (event.key === "End") { current = slides.length - 1; render(); }
+    });
+
+    render();
+  </script>
+</body>
+</html>
