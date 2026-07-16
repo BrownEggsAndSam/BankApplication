@@ -1,92 +1,119 @@
-# Prompt: Incorporate Work-Laptop Evidence Into My Director Presentation
+# Data Set Compliance & EDG Scorecard Discussion
 
-You are helping me refine an existing HTML presentation for a Director-level role classification conversation. The deck is not a generic promotion pitch. It is a controlled, evidence-led story that argues my current classification does not match the blended technical role I am already performing.
+## Question: Can a data set have a low EDG score (e.g., 12%) and still be in **Accepted** status?
 
-## Existing Flow To Preserve
+**Answer:** - **Yes.** - The **Accepted** status only means the data set
+has passed the workflow and is allowed through the governance process. -
+The EDG score is evaluated separately. - For **High DGR (High
+Governance) assets**, curators are expected to have an EDG score close
+to **100%** (typically **90%+ is considered acceptable**). - For
+**Medium and Low DGR assets**, the EDG score is **not a governance
+requirement**, so even a very low score does not matter.
 
-Preserve this narrative order:
+## Question: When should the EDG Scorecard actually be used?
 
-1. Open with the frame: this is a classification and market-alignment conversation, not a merit conversation.
-2. Briefly humanize me because I work remotely and many people do not know the person behind the deliverables.
-3. Explain urgency with restraint: personal responsibility and financial pressure explain timing, but evidence drives the business case.
-4. Tell my origin story: biology major, call center, Excel automation, Project Analyst, then Data Policy & Governance.
-5. Show progression from operational support into data governance, automation, product translation, metrics logic, implementation support, and AI enablement.
-6. Make the current-state role map clear: Governance + Product + Analytics + Engineering + AI Enablement.
-7. Show the mismatch between how the role may be viewed and what the role actually does.
-8. Add market/job-family evidence after the role mismatch is clear.
-9. End with a direct ask: evaluate current scope, identify correct title/level, review compensation alignment, and agree on decision path.
+**Answer:** - Only for **High DGR assets**. - Logic should be: - **High
+DGR** - Include EDG Scorecard in compliance calculations. - **Medium /
+Low DGR** - Ignore the EDG Scorecard entirely. - It is not a meaningful
+metric for compliance.
 
-## Tone
+## Question: Does the STTM Scorecard follow the same rule?
 
-Keep the tone polished, calm, warm, and Director-ready. It can have personality, but it should not sound bitter, desperate, entitled, or overly scripted. The deck should support me while I speak; it should not speak everything for me.
+**Answer:** - Yes. - For Medium and Low DGR assets: - Attribute
+rationalization is not required. - Therefore STTM scorecard values are
+also not important. - STTM compliance mainly matters for High DGR
+assets.
 
-Use concise slide copy. Put sensitive or detailed context in speaker notes, not on the main slide, unless it is business evidence.
+## Question: What should the Data Set Compliance metric actually be?
 
-## Evidence To Incorporate
+Current example: - **595 Accepted out of 757 total**
 
-Review the work-laptop details I provide and place them into the right part of the flow. Prioritize evidence that proves role scope, technical depth, business impact, and market mismatch.
+**Answer:** - That is generally the correct direction. - The compliance
+metric should represent: - Accepted data sets. - Minus obsolete/retired
+data sets (depending on final rules). - Additional status logic still
+needs to be finalized.
 
-For each work item, extract:
+## Question: Should Approved data sets count the same as Accepted?
 
-- Initiative name
-- Dates or timeframe
-- My role: led, built, owned logic, translated requirements, tested, implemented, automated, advised, or supported
-- Stakeholders or partner teams
-- Deliverables or artifacts
-- Technical skills used
-- Business impact
-- Proof available: screenshot, award, review quote, email, Teams message, ticket, dashboard, workflow, script, requirement doc, or release artifact
+**Answer:** - Probably **yes**. - Some data sets are **Approved** but
+cannot be vended because of other restrictions. - Governance needs to
+confirm whether Approved receives the same weight as Accepted.
 
-## Specific Places To Strengthen
+## Question: What about Contract Restricted data sets?
 
-Add detail to these deck areas:
+**Answer:** - Third-party purchased data may have contractual sharing
+restrictions. - These data sets: - Remain in **Accepted** status. - Pass
+governance rules. - **Cannot be vended downstream.** - They should
+likely be excluded from ICR compliance calculations.
 
-- Project Analyst chapter: exact dates, pay changes, performance ratings, business functions supported, and signs that the role expanded beyond admin work.
-- Data Policy & Governance pivot: why Linda took a chance, what Michael trusted me with, and examples where my judgment helped the team.
-- DSET / STTM / local Python workflow: before-and-after process, what I built, how close it was to the official tool, cycle-time saved, and how it changed my relationship with Sheeba's team.
-- PowerBI / Unqork / Appian: what I created, what I helped vet, which requirements or questions came through me, and how my involvement compared with typical developer involvement.
-- Tableau / metrics: dashboards, refresh logic, metric definitions, audit support, automation, and examples where I owned or translated logic.
-- UAD 2.6 to UAD 3.6: number of attributes, files reviewed, mappings handled, stakeholders, technical debt closed, and any town hall recognition.
-- NPI / Privacy Office: scripts, similarity-matching logic, implementation support, Strong BEAT award, and impact.
-- Current portfolio since April 2025: Express Registration, Dataset Enablement, PDC/NPI, Unstructured Files, Collibra to PDC, Collibra to KE, Collibra Workflows, Agents.
-- Market analysis: official job architecture screenshots, internal role descriptions, external postings, salary bands, and skills overlap.
+## Question: Which statuses should be ignored?
 
-## How To Update The Deck
+**Answer:** Ignore: - Candidate - Retired
 
-Do not dump every detail onto slides. Use this pattern:
+Reason: - Candidate = incomplete or half-built. - Retired = no longer
+active.
 
-- Main slide: one strong claim plus 3-5 proof points.
-- Speaker notes: fuller story, context, and optional talking points.
-- Evidence appendix or evidence gallery: screenshots and artifacts that back up claims.
-- If a screenshot is hard to read, summarize its relevance in text instead of relying on the audience to inspect it.
+## Question: Who defines the weighting and filtering rules?
 
-When adding evidence, prefer this wording structure:
+**Answer:** Governance owners: - Matt - Charu
 
-- "I owned..."
-- "I built..."
-- "I translated..."
-- "I implemented..."
-- "I enabled..."
-- "The team relied on me for..."
-- "The business impact was..."
+They will determine: - Which statuses count. - Which statuses are
+excluded. - Weighting of statuses. - Final governance calculation rules.
 
-Avoid vague phrasing like:
+## Question: Is Data Set Compliance different from Release Review Compliance?
 
-- "Helped with stuff"
-- "Was involved in"
-- "Did a lot"
-- "Supported many things"
-- "I feel like"
+**Answer:** Yes.
 
-Replace vague claims with concrete evidence.
+### Data Set Compliance
 
-## Output I Want
+Measures: - Accepted percentage. - EDG Scorecard (High DGR only). - STTM
+completion. - Overall governance.
 
-Return:
+### Release Review Compliance
 
-1. A revised HTML presentation that keeps the same visual design and interaction pattern.
-2. A short list of the strongest evidence added.
-3. A short list of remaining gaps or details I should still collect.
-4. Any slide where the tone may be too sensitive, too aggressive, or too vague.
+Includes: - Data Exchange - Cloud Compliance - Data Model Compliance -
+AR Compliance - NPI Compliance - Release Review
 
-Important: Do not turn this into a salary-only deck. The salary conversation comes after the role classification case is clear.
+Notes: - N/A values are excluded from the denominator. - A separate
+Release Review scorecard has already been created with Sangi.
+
+## Question: Which STTM requirements actually matter?
+
+**Answer (per Charu):** For compliance she only cares that: - STTM tab
+is completed. - Required attributes pass. - These checks only apply to
+High DGR assets.
+
+She does **not** consider EDG Review Status itself to be the governing
+requirement.
+
+## Question: Should EDG Review Status drive compliance?
+
+**Answer:** Probably not. - EDG Review Status depends on several other
+governance factors. - Compliance should instead be based on the actual
+governance requirements.
+
+## Question: How does STTM connect to the Data Set Compliance table?
+
+**Answer:** Originally STTM existed at: - Interface level. - Data Flow
+level.
+
+Both relationships were tracked separately.
+
+## Question: What changed in the new model?
+
+**Answer:** STTM has moved to the **Producer Offering** level.
+
+Relationship:
+
+``` text
+Producer Offering
+        │
+        ├── Interface
+        │
+        └── Data Flow
+```
+
+Important notes: - One Interface can have one or more Producer
+Offerings. - Producer Offering is now an additional entity to account
+for. - STTM linkage will likely need to move from Interface/Data Flow to
+Producer Offering. - Final mapping still requires additional discussion.
