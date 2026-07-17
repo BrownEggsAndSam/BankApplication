@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S3 Profiling Root Problem and Next Steps</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1d2433;
+      --muted: #5d6678;
+      --line: #dfe4ec;
+      --accent: #315efb;
+      --accent-soft: #eef2ff;
+      --warn: #9a6700;
+      --warn-bg: #fff8e6;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --good: #137333;
+      --good-bg: #edf7ee;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1f3fbf, #315efb);
+      color: white;
+      border-radius: 18px;
+      padding: 30px;
+      margin-bottom: 22px;
+      box-shadow: 0 12px 30px rgba(49, 94, 251, 0.18);
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 900px;
+      font-size: 17px;
+      opacity: 0.95;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 6px 18px rgba(18, 32, 65, 0.05);
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-7 { grid-column: span 7; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 17px;
+    }
+
+    p { margin: 8px 0; }
+
+    ul, ol {
+      margin: 10px 0 0 22px;
+      padding: 0;
+    }
+
+    li { margin: 7px 0; }
+
+    .callout {
+      border-left: 5px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin-top: 12px;
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+      background: var(--warn-bg);
+    }
+
+    .danger {
+      border-left-color: var(--danger);
+      background: var(--danger-bg);
+    }
+
+    .good {
+      border-left-color: var(--good);
+      background: var(--good-bg);
+    }
+
+    code, pre {
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    pre {
+      background: #111827;
+      color: #e5e7eb;
+      padding: 14px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    .tag-internal { background: #e8f0fe; color: #174ea6; }
+    .tag-vendor { background: #fce8e6; color: #a50e0e; }
+    .tag-evidence { background: #e6f4ea; color: #137333; }
+
+    .checklist li {
+      list-style: none;
+      margin-left: -22px;
+      padding-left: 28px;
+      position: relative;
+    }
+
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .step {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+    }
+
+    .arrow { color: var(--muted); font-weight: 700; }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 800px) {
+      .span-7, .span-5, .span-6 { grid-column: span 12; }
+      .hero h1 { font-size: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>S3 Profiling: Root Problem, Investigation Plan, and Next Steps</h1>
+      <p>
+        This page explains what the developer actually identified, why the current S3 automation requirement is incomplete,
+        what questions still need answers, and what evidence should be collected before the team commits to a solution or timeline.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>1. What happened in the meeting?</h2>
+        <p>
+          The team originally discussed S3 profiling as though it could follow a simple path:
+        </p>
+
+        <div class="flow">
+          <div class="step">Read S3 Inventory</div>
+          <div class="arrow">→</div>
+          <div class="step">Find DSET</div>
+          <div class="arrow">→</div>
+          <div class="step">Send one path to Pentaho</div>
+          <div class="arrow">→</div>
+          <div class="step">Ingest recent files</div>
+          <div class="arrow">→</div>
+          <div class="step">Profile and create collection</div>
+        </div>
+
+        <div class="callout danger">
+          <strong>The developer identified that this happy path is not consistently valid.</strong>
+          The same DSET may appear under multiple nested directories, dates, partitions, archives, or application-specific folder structures.
+          Therefore, identifying a DSET does not automatically produce one unique ingestion path.
+        </div>
+      </article>
+
+      <article class="card span-7">
+        <h2>2. The real root problem</h2>
+        <p>The current design assumes this relationship:</p>
+        <pre>Dataset ID → One S3 directory → One recent population</pre>
+
+        <p>But the inventory may actually look like this:</p>
+        <pre>Dataset ID
+  ├── load_date=2026-06-01/dataset_615/
+  ├── load_date=2026-06-02/dataset_615/
+  ├── archive/2026-05/dataset_615/
+  └── application/table/date/dataset_615/</pre>
+
+        <p>
+          This creates a one-to-many relationship between a dataset and its S3 paths.
+          The automation does not yet know which path or paths are valid, current, non-duplicate, and appropriate for profiling.
+        </p>
+
+        <div class="callout warning">
+          <strong>This is not only a coding defect.</strong>
+          It is primarily a requirements and solution-design gap. Development cannot implement reliable logic until the expected behavior is defined.
+        </div>
+      </article>
+
+      <article class="card span-5">
+        <h2>3. Questions the developer needs answered</h2>
+        <ul>
+          <li>How is the DSET derived when folder structures are different?</li>
+          <li>Is the DSET always the right-most matching folder?</li>
+          <li>Can one DSET appear under several dates or branches?</li>
+          <li>Should all valid paths be ingested or only the newest one?</li>
+          <li>How should archive, manifest, log, and zero-byte objects be handled?</li>
+          <li>What happens when multiple homogeneous file groups are found?</li>
+          <li>Which resource ID is needed for profiling, and how is it retrieved?</li>
+          <li>Does the required API work in production, not only test?</li>
+        </ul>
+      </article>
+
+      <article class="card span-12">
+        <h2>4. Why the existing S3 Inventory is helpful but not enough</h2>
+        <p>
+          The S3 Inventory should be the starting point because it lets the team inspect bucket contents without asking Pentaho to discover everything.
+          However, the inventory still needs interpretation logic.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Inventory gives us</th>
+              <th>Still needs to be determined</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bucket and object key</td>
+              <td>Which portion of the key represents the authoritative dataset path</td>
+            </tr>
+            <tr>
+              <td>Repeated DSET occurrences</td>
+              <td>Whether they are duplicates, partitions, dated copies, archives, or separate valid populations</td>
+            </tr>
+            <tr>
+              <td>File modification dates</td>
+              <td>Whether date filtering should use object date, folder date, receive date, load date, or another business date</td>
+            </tr>
+            <tr>
+              <td>File extensions and sizes</td>
+              <td>Which formats are supported and which files should be excluded</td>
+            </tr>
+            <tr>
+              <td>Full object keys</td>
+              <td>Which folder level should be submitted to the ingestion API</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card span-6">
+        <h2>5. What Nach should provide</h2>
+        <p>
+          Nach's examples are important because they can prove the non-happy-path structures and help define the resolution rules.
+        </p>
+
+        <ul class="checklist">
+          <li>One straightforward example where one DSET maps to one clear path.</li>
+          <li>One example where the same DSET appears under multiple dates.</li>
+          <li>One example with several nested folders before the DSET.</li>
+          <li>One example containing archive, manifest, log, or temporary files.</li>
+          <li>One example where the dataset is not the final folder.</li>
+          <li>One example where multiple CSV structures exist for the same DSET.</li>
+          <li>The expected correct ingestion path for each example.</li>
+          <li>The expected file population for each example.</li>
+        </ul>
+
+        <div class="callout good">
+          The best output from Nach would be a small annotated spreadsheet containing:
+          bucket, full key, identified DSET, expected parent path, include/exclude decision, and the reason.
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>6. What you already have that is useful</h2>
+        <p><span class="tag tag-evidence">Useful</span> Current <code>swagger.json</code></p>
+        <p>
+          Use it to verify whether the REST APIs support date ranges, recursive ingestion, path wildcards, search, entity lookup,
+          profiling submission, collection creation, and status retrieval.
+        </p>
+
+        <p><span class="tag tag-evidence">Useful</span> Existing GraphQL scripts</p>
+        <p>
+          Use them to retrieve dictionary IDs, pattern IDs, resource IDs, profiling status, and metadata that may not be available through REST.
+        </p>
+
+        <p><span class="tag tag-evidence">Useful</span> S3 Inventory extracts</p>
+        <p>
+          Use several representative samples, not only one CSV, because the folder patterns are inconsistent.
+        </p>
+
+        <p><span class="tag tag-evidence">Useful</span> Existing DB profiling implementation</p>
+        <p>
+          Reuse the orchestration pattern, but document every parameter or metadata step that differs for S3.
+        </p>
+      </article>
+
+      <article class="card span-12">
+        <h2>7. Additional evidence that would be most helpful</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Artifact</th>
+              <th>Why it matters</th>
+              <th>What to look for</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Annotated S3 Inventory samples</td>
+              <td>Defines the real folder patterns and edge cases</td>
+              <td>DSET location, dates, repeated paths, archive paths, file formats</td>
+            </tr>
+            <tr>
+              <td>Current dataset compliance table schema</td>
+              <td>Shows whether a dataset-to-path mapping already exists</td>
+              <td>Dataset ID, bucket, path, application, status, parent-child relationship</td>
+            </tr>
+            <tr>
+              <td>Swagger endpoint matrix</td>
+              <td>Separates confirmed APIs from assumed APIs</td>
+              <td>Input fields, output IDs, date filters, wildcard support, recursive behavior</td>
+            </tr>
+            <tr>
+              <td>GraphQL query results from test and production</td>
+              <td>Confirms whether IDs and metadata are retrievable in both environments</td>
+              <td>Resource ID, dictionary ID, pattern ID, collection ID, job status</td>
+            </tr>
+            <tr>
+              <td>Manual UI screenshots or recorded inputs</td>
+              <td>Shows parameters used when profiling S3 manually</td>
+              <td>Header flag, delimiter, dictionaries, patterns, discovery settings</td>
+            </tr>
+            <tr>
+              <td>Known production defects</td>
+              <td>Prevents designing around APIs that only work in test</td>
+              <td>404, 500, missing IDs, failed submissions, unsupported parameters</td>
+            </tr>
+            <tr>
+              <td>Expected collection outcome</td>
+              <td>Clarifies what happens after profiling</td>
+              <td>One collection per DSET, per format, per date, or per homogeneous group</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card span-7">
+        <h2>8. Suggested investigation sequence</h2>
+        <ol>
+          <li>
+            <strong>Collect 5–10 representative S3 Inventory examples.</strong>
+            Include both happy-path and difficult folder structures.
+          </li>
+          <li>
+            <strong>Annotate the expected answer.</strong>
+            For every example, identify the DSET, valid path, date population, exclusions, and expected collection result.
+          </li>
+          <li>
+            <strong>Build a dataset-to-path rule.</strong>
+            Decide whether the output is one path or multiple paths per DSET.
+          </li>
+          <li>
+            <strong>Review Swagger.</strong>
+            Confirm whether the ingestion API supports date filtering, recursion, explicit files, wildcards, and job status.
+          </li>
+          <li>
+            <strong>Run API tests in test and production.</strong>
+            Do not assume production behavior matches test.
+          </li>
+          <li>
+            <strong>Run GraphQL tests.</strong>
+            Confirm how to obtain resource IDs, dictionary IDs, pattern IDs, and collection metadata.
+          </li>
+          <li>
+            <strong>Document S3-specific profiling inputs.</strong>
+            Header handling, delimiters, patterns, dictionaries, document processing, and file sampling.
+          </li>
+          <li>
+            <strong>Define collection rules.</strong>
+            Decide what to do when there are multiple file structures or multiple successful profiling groups.
+          </li>
+          <li>
+            <strong>Separate internal work from vendor blockers.</strong>
+            Only escalate items the team cannot solve with inventory, REST, GraphQL, or internal mapping logic.
+          </li>
+        </ol>
+      </article>
+
+      <article class="card span-5">
+        <h2>9. Likely internal solution shape</h2>
+        <p><span class="tag tag-internal">Internal</span> S3 path-resolution layer</p>
+
+        <div class="flow">
+          <div class="step">Inventory row</div>
+          <div class="arrow">→</div>
+          <div class="step">Parse key</div>
+          <div class="arrow">→</div>
+          <div class="step">Identify DSET</div>
+          <div class="arrow">→</div>
+          <div class="step">Group paths</div>
+          <div class="arrow">→</div>
+          <div class="step">Apply date/file rules</div>
+        </div>
+
+        <h3>Recommended output table</h3>
+        <pre>dataset_id
+bucket_name
+full_directory_path
+path_type
+business_date
+object_count
+supported_file_count
+latest_modified_date
+include_flag
+exclusion_reason
+profiling_status</pre>
+
+        <p class="small">
+          This is likely better than adding one full-path column to the existing dataset compliance table,
+          because one dataset may require multiple path records.
+        </p>
+      </article>
+
+      <article class="card span-12">
+        <h2>10. Vendor dependency: what is truly mandatory?</h2>
+
+        <p>
+          The team should avoid asking the vendor to solve internal Fannie Mae dataset-identification logic.
+          However, some platform capabilities may still be unavoidable.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Capability</th>
+              <th>Can likely be solved internally?</th>
+              <th>Vendor needed?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Identify DSET from S3 Inventory</td>
+              <td>Yes, with rules and examples</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Map one DSET to multiple paths</td>
+              <td>Yes, with a child mapping table</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Exclude unsupported files</td>
+              <td>Yes, before submission</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Limit to recent objects before submission</td>
+              <td>Possibly, if explicit paths/files can be generated</td>
+              <td>Maybe</td>
+            </tr>
+            <tr>
+              <td>API date-range filtering</td>
+              <td>No, if API only accepts a broad directory</td>
+              <td><span class="tag tag-vendor">Likely mandatory</span></td>
+            </tr>
+            <tr>
+              <td>Wildcard-path support</td>
+              <td>Can sometimes be avoided with internal path expansion</td>
+              <td>Helpful, but not always mandatory</td>
+            </tr>
+            <tr>
+              <td>Production API defects</td>
+              <td>No</td>
+              <td><span class="tag tag-vendor">Mandatory</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card span-12">
+        <h2>11. Questions to answer before grooming is complete</h2>
+        <ul class="checklist">
+          <li>What is the authoritative rule for finding the DSET in an S3 key?</li>
+          <li>Can the same DSET have multiple valid ingestion paths?</li>
+          <li>Which date field determines the 30-day population?</li>
+          <li>Should date filtering happen internally or inside Pentaho?</li>
+          <li>Can the API accept an explicit list of files or only a directory?</li>
+          <li>Does the API recursively process subfolders?</li>
+          <li>Does wildcard support exist in REST, GraphQL, or neither?</li>
+          <li>How are entity/resource IDs retrieved after ingestion?</li>
+          <li>Which S3 profiling inputs differ from DB profiling?</li>
+          <li>How are multiple homogeneous groups converted into collections?</li>
+          <li>What works in test but fails in production?</li>
+          <li>Which September commitments depend on unresolved vendor work?</li>
+        </ul>
+      </article>
+
+      <article class="card span-12">
+        <h2>12. One-paragraph summary for leadership</h2>
+        <div class="callout">
+          The developer identified that the S3 profiling requirement assumes a dataset can be mapped to one unique folder path, but the S3 Inventory contains inconsistent and nested structures where the same DSET may appear under multiple dates and directory branches. Before automation can be built, the team must define how to derive the authoritative DSET path, how to handle multiple paths and file populations, and how collections should be created from multiple profiling results. S3 Inventory can reduce vendor dependency, but Pentaho API date filtering and production API reliability may still be mandatory blockers.
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
