@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Agentic Work Presentation Plan</title>
+  <style type="text/css">:root {
+--ink: #17243a;
+--muted: #5d6a7c;
+--navy: #17365d;
+--teal: #087f7a;
+--teal-soft: #e8f5f3;
+--amber: #b46a09;
+--amber-soft: #fff5dd;
+--red: #a33a3a;
+--red-soft: #fff0f0;
+--paper: #ffffff;
+--wash: #f3f6f9;
+--line: #dce3ea;
+--shadow: 0 14px 38px rgba(23, 54, 93, 0.10);
+}
+* {
+box-sizing: border-box;
+}
+html {
+scroll-behavior: smooth;
+}
+body {
+margin: 0;
+color: var(--ink);
+background:
+radial-gradient(circle at 10% 0%, rgba(8, 127, 122, 0.09), transparent 34rem),
+linear-gradient(180deg, #eef3f7 0, #f8fafc 24rem, #f8fafc 100%);
+font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+font-size: 17px;
+line-height: 1.68;
+}
+body > header,
+body > nav,
+body > main,
+body > section,
+body > p,
+body > table,
+body > ul,
+body > ol,
+body > blockquote,
+body > hr {
+width: min(1120px, calc(100% - 40px));
+margin-left: auto;
+margin-right: auto;
+}
+body > header {
+margin-top: 34px;
+padding: 56px clamp(28px, 6vw, 72px) 44px;
+color: white;
+background:
+linear-gradient(135deg, rgba(8, 127, 122, 0.96), rgba(23, 54, 93, 0.98)),
+var(--navy);
+border-radius: 24px;
+box-shadow: var(--shadow);
+}
+body > header h1 {
+max-width: 820px;
+margin: 0;
+color: white;
+font-size: clamp(2.35rem, 5vw, 4.6rem);
+line-height: 1.02;
+letter-spacing: -0.045em;
+}
+body > header .subtitle {
+max-width: 760px;
+margin: 18px 0 0;
+color: rgba(255, 255, 255, 0.82);
+font-size: clamp(1rem, 2vw, 1.25rem);
+}
+nav#TOC {
+margin-top: 22px;
+margin-bottom: 24px;
+padding: 24px 30px;
+background: rgba(255, 255, 255, 0.92);
+border: 1px solid var(--line);
+border-radius: 18px;
+box-shadow: 0 10px 28px rgba(23, 54, 93, 0.06);
+backdrop-filter: blur(14px);
+}
+nav#TOC::before {
+display: block;
+margin-bottom: 10px;
+color: var(--navy);
+content: "Presentation plan";
+font-size: 0.78rem;
+font-weight: 800;
+letter-spacing: 0.13em;
+text-transform: uppercase;
+}
+nav#TOC ul {
+display: grid;
+grid-template-columns: repeat(3, minmax(0, 1fr));
+gap: 6px 24px;
+margin: 0;
+padding: 0;
+list-style: none;
+}
+nav#TOC ul ul {
+display: none;
+}
+nav#TOC a {
+display: block;
+padding: 5px 0;
+color: var(--muted);
+font-size: 0.9rem;
+line-height: 1.3;
+text-decoration: none;
+}
+nav#TOC a:hover {
+color: var(--teal);
+}
+main {
+margin-bottom: 72px;
+padding: clamp(30px, 5vw, 64px) clamp(24px, 5vw, 68px) 72px;
+background: var(--paper);
+border: 1px solid rgba(220, 227, 234, 0.8);
+border-radius: 24px;
+box-shadow: var(--shadow);
+}
+h1,
+h2,
+h3,
+h4 {
+color: var(--navy);
+line-height: 1.18;
+text-wrap: balance;
+}
+h2 {
+margin: 70px 0 22px;
+padding-top: 8px;
+font-size: clamp(1.7rem, 3.6vw, 2.55rem);
+letter-spacing: -0.03em;
+}
+h2::after {
+display: block;
+width: 64px;
+height: 5px;
+margin-top: 14px;
+background: linear-gradient(90deg, var(--teal), #5bc1b8);
+border-radius: 999px;
+content: "";
+}
+h3 {
+margin: 46px 0 15px;
+font-size: clamp(1.3rem, 2.5vw, 1.78rem);
+letter-spacing: -0.018em;
+}
+h4 {
+margin: 28px 0 10px;
+color: var(--teal);
+font-size: 1.08rem;
+text-transform: none;
+}
+p {
+margin: 0 0 1em;
+}
+strong {
+color: #102d52;
+}
+a {
+color: var(--teal);
+}
+blockquote {
+position: relative;
+margin: 26px 0;
+padding: 24px 28px 24px 64px;
+color: #173450;
+background: linear-gradient(135deg, var(--teal-soft), #f2faf9);
+border: 1px solid #cde8e4;
+border-radius: 16px;
+font-size: 1.12rem;
+font-weight: 650;
+}
+blockquote::before {
+position: absolute;
+top: 11px;
+left: 20px;
+color: rgba(8, 127, 122, 0.28);
+content: "“";
+font-family: Georgia, serif;
+font-size: 4.2rem;
+line-height: 1;
+}
+blockquote p:last-child {
+margin-bottom: 0;
+}
+ul,
+ol {
+padding-left: 1.35em;
+}
+li {
+margin: 0.42em 0;
+}
+li::marker {
+color: var(--teal);
+font-weight: 700;
+}
+hr {
+height: 1px;
+margin-top: 44px;
+margin-bottom: 44px;
+background: linear-gradient(90deg, transparent, var(--line), transparent);
+border: 0;
+}
+.table-wrap {
+overflow-x: auto;
+margin: 24px 0 30px;
+border: 1px solid var(--line);
+border-radius: 14px;
+}
+table {
+width: 100%;
+margin: 24px 0 30px;
+border-spacing: 0;
+border-collapse: separate;
+overflow: hidden;
+border: 1px solid var(--line);
+border-radius: 14px;
+font-size: 0.92rem;
+line-height: 1.48;
+}
+thead th {
+padding: 13px 15px;
+color: white;
+background: var(--navy);
+border-right: 1px solid rgba(255, 255, 255, 0.15);
+font-size: 0.78rem;
+letter-spacing: 0.045em;
+text-align: left;
+text-transform: uppercase;
+vertical-align: bottom;
+}
+thead th:last-child {
+border-right: 0;
+}
+tbody td {
+padding: 13px 15px;
+border-top: 1px solid var(--line);
+border-right: 1px solid var(--line);
+vertical-align: top;
+}
+tbody td:last-child {
+border-right: 0;
+}
+tbody tr:nth-child(even) td {
+background: #f8fafc;
+}
+tbody tr:hover td {
+background: var(--teal-soft);
+}
+code {
+padding: 0.12em 0.34em;
+color: #174b4a;
+background: var(--teal-soft);
+border-radius: 5px;
+font-size: 0.88em;
+}
+input[type="checkbox"] {
+width: 1rem;
+height: 1rem;
+margin-right: 0.45rem;
+accent-color: var(--teal);
+}
+section.level2:first-of-type h2 {
+margin-top: 20px;
+}
+section.level3:has(> h3[id^="slide-"]) {
+margin: 30px -18px;
+padding: 6px 18px 24px;
+background: linear-gradient(180deg, #fbfcfd, #ffffff);
+border: 1px solid var(--line);
+border-left: 5px solid var(--teal);
+border-radius: 14px;
+}
+section.level3:has(> h3[id^="slide-"]) h3 {
+margin-top: 22px;
+}
+@media (max-width: 820px) {
+body {
+font-size: 16px;
+}
+body > header,
+body > nav,
+body > main {
+width: min(100% - 22px, 1120px);
+}
+body > header {
+margin-top: 11px;
+padding: 38px 25px 32px;
+border-radius: 18px;
+}
+nav#TOC ul {
+grid-template-columns: 1fr 1fr;
+}
+main {
+padding: 28px 21px 54px;
+border-radius: 18px;
+}
+h2 {
+margin-top: 55px;
+}
+table {
+display: block;
+overflow-x: auto;
+white-space: normal;
+}
+blockquote {
+padding: 22px 22px 22px 48px;
+}
+}
+@media (max-width: 540px) {
+nav#TOC ul {
+grid-template-columns: 1fr;
+}
+}
+@media print {
+@page {
+margin: 0.65in;
+}
+body {
+color: #111;
+background: white;
+font-size: 10.5pt;
+}
+body > header,
+body > nav,
+body > main {
+width: 100%;
+margin: 0;
+box-shadow: none;
+}
+body > header {
+padding: 34px;
+border-radius: 0;
+}
+nav#TOC {
+margin: 18px 0 26px;
+break-after: page;
+}
+main {
+padding: 0;
+border: 0;
+}
+h2 {
+break-before: page;
+}
+h2,
+h3,
+h4 {
+break-after: avoid;
+}
+table,
+blockquote,
+ul,
+ol {
+break-inside: avoid;
+}
+a {
+color: inherit;
+text-decoration: none;
+}
+}
+</style>
+</head>
+<body>
+  <header id="title-block-header">
+    <h1>From AI Buzzwords to Better Work</h1>
+    <p class="subtitle">Presentation blueprint for a nontechnical
+business audience</p>
+  </header>
+  <nav id="TOC" role="doc-toc">
+    <ul>
+    <li><a href="#1-executive-direction" id="toc-1-executive-direction">1. Executive direction</a></li>
+    <li><a href="#2-recommended-title-options" id="toc-2-recommended-title-options">2. Recommended title
+    options</a></li>
+    <li><a href="#3-narrative-spine" id="toc-3-narrative-spine">3.
+    Narrative spine</a></li>
+    <li><a href="#4-forty-five-minute-run-of-show" id="toc-4-forty-five-minute-run-of-show">4. Forty-five-minute run of
+    show</a></li>
+    <li><a href="#5-slide-by-slide-plan" id="toc-5-slide-by-slide-plan">5. Slide-by-slide plan</a></li>
+    <li><a href="#6-demonstration-strategy" id="toc-6-demonstration-strategy">6. Demonstration strategy</a></li>
+    <li><a href="#7-asset-checklist" id="toc-7-asset-checklist">7. Asset
+    checklist</a></li>
+    <li><a href="#8-leadership-decisions-required-before-the-session" id="toc-8-leadership-decisions-required-before-the-session">8.
+    Leadership decisions required before the session</a></li>
+    <li><a href="#9-agent-opportunity-canvas" id="toc-9-agent-opportunity-canvas">9. Agent Opportunity
+    Canvas</a></li>
+    <li><a href="#10-how-to-talk-about-tokens-and-experimentation" id="toc-10-how-to-talk-about-tokens-and-experimentation">10. How to
+    talk about tokens and experimentation</a></li>
+    <li><a href="#11-phrasing-to-strengthen-or-avoid" id="toc-11-phrasing-to-strengthen-or-avoid">11. Phrasing to
+    strengthen or avoid</a></li>
+    <li><a href="#12-suggested-opening-and-closing-scripts" id="toc-12-suggested-opening-and-closing-scripts">12. Suggested
+    opening and closing scripts</a></li>
+    <li><a href="#13-deck-design-guidance" id="toc-13-deck-design-guidance">13. Deck design guidance</a></li>
+    <li><a href="#14-appendix-plan" id="toc-14-appendix-plan">14.
+    Appendix plan</a></li>
+    <li><a href="#15-items-to-confirm-from-the-transcript-before-building-the-deck" id="toc-15-items-to-confirm-from-the-transcript-before-building-the-deck">15.
+    Items to confirm from the transcript before building the
+    deck</a></li>
+    <li><a href="#16-final-build-checklist" id="toc-16-final-build-checklist">16. Final build checklist</a></li>
+    <li><a href="#final-recommendation" id="toc-final-recommendation">Final recommendation</a></li>
+    </ul>
+  </nav>
+  <main>
+<p><strong>Recommended subtitle:</strong> How agents, skills, and
+harnesses can reduce rework, bridge technical gaps, and scale
+data-governance expertise</p>
+<p><strong>Recommended length:</strong> 45 minutes total: 40 minutes of
+content and 5 minutes for discussion</p>
+<p><strong>Primary audience:</strong> Business-facing data-governance
+associates, stewards, product owners, and leaders who understand the
+work but do not consider themselves technical</p>
+<hr />
+<h2 id="1-executive-direction">1. Executive direction</h2>
+<p>This presentation should not try to teach Python, PowerShell, HTML,
+databases, or AI architecture. Its job is to help a business audience
+recognize where agentic work fits into an ordinary workday.</p>
+<p>The central idea is:</p>
+<blockquote>
+<p>Business users do not need to become software developers. They need
+to become effective designers, reviewers, and owners of agent-enabled
+work.</p>
+</blockquote>
+<p>The presentation should bridge three gaps:</p>
+<ol type="1">
+<li><strong>The language gap:</strong> Enterprise initiatives are
+discussed through terms such as agents, personas, data quality, metrics,
+and automation, but employees do not know what those terms mean for
+their own work.</li>
+<li><strong>The execution gap:</strong> Business teams know the rules
+and desired outcomes, while technical teams need clear requirements,
+examples, and acceptance criteria.</li>
+<li><strong>The adoption gap:</strong> People may see impressive
+demonstrations without knowing what they are allowed to try, who will
+support them, or how an experiment becomes an approved capability.</li>
+</ol>
+<p>The four case studies should prove that agents can help close these
+gaps while the business owner remains accountable for context, judgment,
+and approval.</p>
+<h3 id="the-one-sentence-promise-to-the-audience">The one-sentence
+promise to the audience</h3>
+<blockquote>
+<p>By the end of this session, you will be able to identify one part of
+your work that an agent could help with, describe the skill it would
+need, and recognize the controls required to use it safely.</p>
+</blockquote>
+<h3 id="what-the-audience-should-leave-understanding">What the audience
+should leave understanding</h3>
+<ul>
+<li>What an <strong>agent</strong>, <strong>skill</strong>, and
+<strong>harness</strong> mean in plain language.</li>
+<li>Why an agent is more useful than a one-time chatbot response when
+work involves several steps or tools.</li>
+<li>How business knowledge becomes the rules and examples that make an
+agent useful.</li>
+<li>How to recognize good candidates for agent assistance.</li>
+<li>Why AI output still requires human judgment and verification.</li>
+<li>What support path exists if they want to test an idea after the
+presentation.</li>
+</ul>
+<hr />
+<h2 id="2-recommended-title-options">2. Recommended title options</h2>
+<h3 id="recommended">Recommended</h3>
+<p><strong>From AI Buzzwords to Better Work</strong><br />
+<em>Thinking Agentically in Data Governance</em></p>
+<p>This title starts with the audience&#39;s frustration and promises a
+practical outcome.</p>
+<h3 id="alternatives">Alternatives</h3>
+<ul>
+<li><strong>You Do Not Need to Be a Developer to Work
+Agentically</strong></li>
+<li><strong>Agents at Work: Turning Governance Expertise into Repeatable
+Workflows</strong></li>
+<li><strong>From Business Knowledge to Agent-Enabled Work</strong></li>
+<li><strong>Where Does an Agent Fit in My Workday?</strong></li>
+</ul>
+<p>Avoid titles that sound like a technical architecture review or imply
+that people will be replaced.</p>
+<hr />
+<h2 id="3-narrative-spine">3. Narrative spine</h2>
+<p>The presentation should feel like one story rather than four
+unrelated demonstrations.</p>
+<h3 id="act-1--the-problem">Act 1 — The problem</h3>
+<p>The enterprise is moving quickly, but many business users hear
+initiative names and AI terminology without seeing a connection to their
+daily work. At the same time, poorly directed AI can produce &quot;workslop&quot;:
+polished-looking output that creates more verification and cleanup for
+someone else.</p>
+<h3 id="act-2--the-mental-model">Act 2 — The mental model</h3>
+<p>Introduce only three concepts:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>Plain-language definition</th>
+<th>Workplace analogy</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Agent</strong></td>
+<td>An AI worker that can pursue a goal across several steps and use
+approved tools, while remaining under human oversight.</td>
+<td>A capable analyst</td>
+</tr>
+<tr class="even">
+<td><strong>Skill</strong></td>
+<td>Reusable instructions, rules, examples, and domain knowledge for
+performing one kind of task well.</td>
+<td>The analyst&#39;s playbook or SOP</td>
+</tr>
+<tr class="odd">
+<td><strong>Harness</strong></td>
+<td>The controlled workspace that gives the agent its tools, context,
+permissions, limits, and review points.</td>
+<td>The analyst&#39;s workstation, access, and guardrails</td>
+</tr>
+</tbody>
+</table>
+<p>The audience does not need deeper architecture for the main
+presentation. If the organization uses slightly different definitions,
+adjust the labels while preserving this mental model.</p>
+<h3 id="act-3--proof-through-familiar-work">Act 3 — Proof through
+familiar work</h3>
+<p>Use four case studies spanning email triage, requirement translation,
+live-data analysis, and rationalization. Every case follows the same
+structure:</p>
+<ol type="1">
+<li>The business problem.</li>
+<li>What the agent is asked to accomplish.</li>
+<li>The skill or domain knowledge it needs.</li>
+<li>The tools and boundaries supplied by the harness.</li>
+<li>The human review point.</li>
+<li>The resulting business value.</li>
+</ol>
+<h3 id="act-4--safe-adoption">Act 4 — Safe adoption</h3>
+<p>End with a realistic adoption loop:</p>
+<blockquote>
+<p><strong>Find a small task → sandbox it → verify the result → tune it
+→ package what works → reuse it → scale only with approval</strong></p>
+</blockquote>
+<p>The closing message is not “race to put AI into production.” It
+is:</p>
+<blockquote>
+<p><strong>Prototype quickly. Productionize deliberately. Learn faster
+than the problem changes.</strong></p>
+</blockquote>
+<hr />
+<h2 id="4-forty-five-minute-run-of-show">4. Forty-five-minute run of
+show</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Time</th>
+<th>Section</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0:00–0:03</td>
+<td>Opening and audience hook</td>
+<td>Make the topic about their workday, not AI theory.</td>
+</tr>
+<tr class="even">
+<td>0:03–0:06</td>
+<td>Buzzwords versus useful work</td>
+<td>Name the current disconnect and introduce workslop.</td>
+</tr>
+<tr class="odd">
+<td>0:06–0:12</td>
+<td>Agent, skill, and harness</td>
+<td>Give the audience one durable mental model.</td>
+</tr>
+<tr class="even">
+<td>0:12–0:14</td>
+<td>The agentic workflow</td>
+<td>Show where the human remains involved.</td>
+</tr>
+<tr class="odd">
+<td>0:14–0:19</td>
+<td>Case 1: Outlook to governed draft</td>
+<td>Demonstrate orchestration and routing.</td>
+</tr>
+<tr class="even">
+<td>0:19–0:24</td>
+<td>Case 2: EDG Scorecard prototype</td>
+<td>Demonstrate requirement translation and iteration.</td>
+</tr>
+<tr class="odd">
+<td>0:24–0:29</td>
+<td>Case 3: Database comparison</td>
+<td>Demonstrate grounded, reproducible analysis.</td>
+</tr>
+<tr class="even">
+<td>0:29–0:34</td>
+<td>Case 4: Rationalization skill</td>
+<td>Demonstrate reusable domain expertise.</td>
+</tr>
+<tr class="odd">
+<td>0:34–0:36</td>
+<td>What all four cases share</td>
+<td>Reinforce the transferable pattern.</td>
+</tr>
+<tr class="even">
+<td>0:36–0:39</td>
+<td>Safe experimentation</td>
+<td>Explain controls without turning the session into compliance
+training.</td>
+</tr>
+<tr class="odd">
+<td>0:39–0:40</td>
+<td>Call to action and support path</td>
+<td>Give the audience one concrete next step.</td>
+</tr>
+<tr class="even">
+<td>0:40–0:45</td>
+<td>Questions and discussion</td>
+<td>Ask participants to name candidate workflows.</td>
+</tr>
+</tbody>
+</table>
+<p>If questions are expected throughout, reserve only three minutes at
+the end and enforce a strict five-minute maximum for each case
+study.</p>
+<hr />
+<h2 id="5-slide-by-slide-plan">5. Slide-by-slide plan</h2>
+<h3 id="slide-1--from-ai-buzzwords-to-better-work">Slide 1 — From AI
+Buzzwords to Better Work</h3>
+<p><strong>Time:</strong> 1 minute</p>
+<p><strong>Purpose:</strong> Establish that the session is practical and
+designed for nontechnical business users.</p>
+<p><strong>On-slide message:</strong></p>
+<blockquote>
+<p>How agents, skills, and harnesses can reduce rework and scale our
+governance expertise</p>
+</blockquote>
+<p><strong>Suggested visual:</strong> A bridge connecting “business
+expertise” to “repeatable, governed execution.” Do not open with a robot
+image or a wall of enterprise initiative logos.</p>
+<p><strong>Speaker cue:</strong></p>
+<blockquote>
+<p>“This is not a coding lesson. It is a way to recognize where an agent
+could help in the work you already understand better than anyone
+else.”</p>
+</blockquote>
+<hr />
+<h3 id="slide-2--where-does-an-agent-fit-in-my-tuesday-morning">Slide 2
+— Where Does an Agent Fit in My Tuesday Morning?</h3>
+<p><strong>Time:</strong> 2 minutes</p>
+<p><strong>Purpose:</strong> Translate the topic from enterprise
+strategy to ordinary work.</p>
+<p><strong>On-slide examples:</strong></p>
+<ul>
+<li>Finding and interpreting the right email.</li>
+<li>Turning a business need into a technical story.</li>
+<li>Comparing information across systems.</li>
+<li>Applying the same rationalization rules repeatedly.</li>
+</ul>
+<p><strong>Suggested visual:</strong> A simple workday with four
+recurring friction points. Keep the examples recognizable and avoid
+product architecture.</p>
+<p><strong>Speaker cue:</strong></p>
+<blockquote>
+<p>“The useful question is not, ‘What can AI do?’ The useful question
+is, ‘Where am I repeatedly spending time finding context, translating
+intent, comparing information, or applying the same rules?’”</p>
+</blockquote>
+<hr />
+<h3 id="slide-3--ai-can-remove-busyworkor-create-more-of-it">Slide 3 —
+AI Can Remove Busywork—or Create More of It</h3>
+<p><strong>Time:</strong> 3 minutes</p>
+<p><strong>Purpose:</strong> Address AI slop early and establish
+credibility.</p>
+<p><strong>Define workslop:</strong> AI-generated work that appears
+complete but lacks the context, validation, or ownership needed to be
+useful, shifting the cleanup burden to another person.</p>
+<p><strong>On-slide contrast:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>Workslop</th>
+<th>Useful agent-enabled work</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Vague request</td>
+<td>Clear outcome and context</td>
+</tr>
+<tr class="even">
+<td>Polished but ungrounded answer</td>
+<td>Output based on approved sources</td>
+</tr>
+<tr class="odd">
+<td>No acceptance criteria</td>
+<td>Defined tests for “good”</td>
+</tr>
+<tr class="even">
+<td>Forwarded without review</td>
+<td>Human verifies and owns the result</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key line:</strong></p>
+<blockquote>
+<p>AI does not remove accountability. It moves more of our effort from
+first-draft creation to direction, judgment, and verification.</p>
+</blockquote>
+<p>Use “workslop” on the slide if that fits the culture; keep “AI slop”
+as an informal speaker phrase rather than the formal heading.</p>
+<hr />
+<h3 id="slide-4--the-role-of-the-business-expert-is-changing">Slide 4 —
+The Role of the Business Expert Is Changing</h3>
+<p><strong>Time:</strong> 2 minutes</p>
+<p><strong>Purpose:</strong> Remove the fear that technical syntax is
+the price of admission.</p>
+<p><strong>On-slide message:</strong></p>
+<blockquote>
+<p>You do not have to write every line of code. You do have to define
+the outcome, provide the rules, recognize a bad result, and approve what
+happens next.</p>
+</blockquote>
+<p><strong>Four responsibilities:</strong></p>
+<ul>
+<li><strong>Direct:</strong> State the outcome and relevant
+context.</li>
+<li><strong>Teach:</strong> Supply business rules, examples, and
+exceptions.</li>
+<li><strong>Verify:</strong> Check facts, logic, and edge cases.</li>
+<li><strong>Own:</strong> Approve the final action or escalate
+uncertainty.</li>
+</ul>
+<p><strong>Important nuance:</strong> A script generated from a
+plain-English request is still code. The easier creation method does not
+remove the need for safe execution and technical review when
+consequences are meaningful.</p>
+<hr />
+<h3 id="slide-5--three-concepts-are-enough-to-get-started">Slide 5 —
+Three Concepts Are Enough to Get Started</h3>
+<p><strong>Time:</strong> 4 minutes</p>
+<p><strong>Purpose:</strong> Explain agent, skill, and harness using one
+recurring analogy.</p>
+<p><strong>Suggested visual:</strong> Three connected cards:</p>
+<ol type="1">
+<li><strong>Agent = capable analyst</strong> — reasons through the
+assignment.</li>
+<li><strong>Skill = playbook</strong> — describes how this organization
+performs the task.</li>
+<li><strong>Harness = controlled workstation</strong> — supplies
+approved tools, data, permissions, and checkpoints.</li>
+</ol>
+<p><strong>Example:</strong></p>
+<blockquote>
+<p>A general agent may know how to compare two lists. A rationalization
+skill teaches it our matching criteria, exception rules, and desired
+output. The harness determines which systems it may read, which actions
+it may take, and where a person must approve the result.</p>
+</blockquote>
+<p><strong>Optional clarification:</strong> A chatbot generally answers
+a prompt. An agent can carry a goal through multiple steps, use tools,
+evaluate intermediate results, and return a completed draft or
+analysis.</p>
+<hr />
+<h3 id="slide-6--what-agentic-work-actually-looks-like">Slide 6 — What
+Agentic Work Actually Looks Like</h3>
+<p><strong>Time:</strong> 2 minutes</p>
+<p><strong>Purpose:</strong> Show the common workflow and human
+checkpoints before the examples.</p>
+<p><strong>Suggested flow:</strong></p>
+<blockquote>
+<p>Business goal → Approved context → Agent applies a skill → Approved
+tool or system → Draft/analysis → Human verifies → Human sends, changes,
+or deploys</p>
+</blockquote>
+<p><strong>Place a human checkpoint in three locations:</strong></p>
+<ul>
+<li><strong>Before:</strong> Is the request, data, and access
+appropriate?</li>
+<li><strong>During:</strong> Does the logic and evidence make
+sense?</li>
+<li><strong>After:</strong> Should this output be sent, changed, or used
+for a decision?</li>
+</ul>
+<p>This slide becomes the reference point for all four cases.</p>
+<hr />
+<h3 id="slides-78--case-1-from-outlook-email-to-a-governed-draft">Slides
+7–8 — Case 1: From Outlook Email to a Governed Draft</h3>
+<p><strong>Time:</strong> 5 minutes total</p>
+<h4 id="business-problem">Business problem</h4>
+<p>Relevant requests arrive through email. The user must find the
+message, infer its intent, identify the correct governance domain,
+locate the relevant guidance, and draft a response. Much of the time is
+spent switching contexts rather than making the final decision.</p>
+<h4 id="proposed-workflow">Proposed workflow</h4>
+<blockquote>
+<p>Approved Outlook folder/sender filter → PowerShell retrieves the
+message → Agent extracts intent → Routes to the appropriate Ask Genie
+persona or domain skill → ICR/EDQ guidance is applied → Draft response
+is produced → Human reviews and sends</p>
+</blockquote>
+<h4 id="agent-skill-and-harness">Agent, skill, and harness</h4>
+<table>
+<thead>
+<tr class="header">
+<th>Element</th>
+<th>In this case</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Agent</td>
+<td>Coordinates the steps and creates the draft.</td>
+</tr>
+<tr class="even">
+<td>Skill</td>
+<td>Email interpretation, domain routing, and response-drafting
+rules.</td>
+</tr>
+<tr class="odd">
+<td>Harness</td>
+<td>Approved Outlook access, PowerShell or another approved connector,
+Ask Genie/domain access, sender restrictions, and no automatic
+sending.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="what-to-show">What to show</h4>
+<p>Use a sanitized, staged example rather than a live inbox:</p>
+<ol type="1">
+<li>A sample email from an approved sender.</li>
+<li>A small annotated image of the filter or script—not a full code
+walkthrough.</li>
+<li>The identified domain and source used.</li>
+<li>The draft response with the human review checkpoint
+highlighted.</li>
+</ol>
+<h4 id="business-value-to-describe">Business value to describe</h4>
+<ul>
+<li>Less time searching and switching systems.</li>
+<li>More consistent routing to ICR, EDQ, or another governance
+domain.</li>
+<li>Faster first drafts grounded in the correct guidance.</li>
+<li>Human ownership retained because the agent does not send the
+message.</li>
+</ul>
+<h4 id="measures-to-collect-later">Measures to collect later</h4>
+<ul>
+<li>Average handling time before and after.</li>
+<li>Routing accuracy.</li>
+<li>Percentage of the draft changed before sending.</li>
+<li>Number of systems manually opened per request.</li>
+</ul>
+<h4 id="boundary-to-state-clearly">Boundary to state clearly</h4>
+<p>The demonstration does not establish that all users may connect an
+agent to Outlook or run PowerShell locally. Access, data handling, and
+execution must follow the approved enterprise path.</p>
+<p><strong>Transition:</strong></p>
+<blockquote>
+<p>“That example starts with an incoming request. The next starts with
+an idea that is still too ambiguous for a technical team to build.”</p>
+</blockquote>
+<hr />
+<h3 id="slides-910--case-2-from-edg-scorecard-requirement-to-shared-prototype">Slides
+9–10 — Case 2: From EDG Scorecard Requirement to Shared Prototype</h3>
+<p><strong>Time:</strong> 5 minutes total</p>
+<h4 id="business-problem-1">Business problem</h4>
+<p>A business owner knows what the EDG Scorecard should accomplish but
+may describe it through scattered rules, exceptions, screenshots, and
+examples. The technical team receives an incomplete story, asks
+follow-up questions, and may build something different from what the
+business envisioned.</p>
+<h4 id="proposed-workflow-1">Proposed workflow</h4>
+<blockquote>
+<p>Raw business explanation → Agent identifies ambiguity and asks
+questions → Requirement is converted into user stories, rules, and
+acceptance criteria → Agent creates a disposable prototype → Business
+owner reviews it → Prompt and prototype are tuned → Validated package is
+handed to the technical team</p>
+</blockquote>
+<h4 id="what-to-show-1">What to show</h4>
+<p>Use three screenshots with large numbered callouts:</p>
+<ol type="1">
+<li><strong>The original prompt:</strong> imperfect and
+conversational.</li>
+<li><strong>The agent&#39;s clarification/tuning loop:</strong> what was
+wrong or incomplete and how you corrected it.</li>
+<li><strong>The prototype and requirements package:</strong> what the
+technical team can now react to.</li>
+</ol>
+<p>Avoid presenting the first output as magic. The most important part
+is the revision trail showing your judgment.</p>
+<h4 id="agent-skill-and-harness-1">Agent, skill, and harness</h4>
+<table>
+<thead>
+<tr class="header">
+<th>Element</th>
+<th>In this case</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Agent</td>
+<td>Converts the need into structured requirements and a prototype.</td>
+</tr>
+<tr class="even">
+<td>Skill</td>
+<td>Requirement elicitation, user-story formatting, scorecard logic, and
+acceptance-criteria generation.</td>
+</tr>
+<tr class="odd">
+<td>Harness</td>
+<td>Approved coding/prototyping environment, supplied examples, test
+data, and clear separation from production.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="core-lesson">Core lesson</h4>
+<blockquote>
+<p>The prototype is a communication artifact, not a production
+application.</p>
+</blockquote>
+<p>Its value is that business and technology can point to the same
+visible behavior before significant development begins.</p>
+<h4 id="measures-to-collect-later-1">Measures to collect later</h4>
+<ul>
+<li>Number of requirement clarification cycles.</li>
+<li>Time from idea to an agreed story.</li>
+<li>Defects caused by misunderstood requirements.</li>
+<li>Percentage of acceptance criteria retained in implementation.</li>
+</ul>
+<p><strong>Transition:</strong></p>
+<blockquote>
+<p>“The first two cases help us find and translate work. The third asks
+the agent to help investigate a live business question using approved
+data.”</p>
+</blockquote>
+<hr />
+<h3 id="slides-1112--case-3-comparing-what-is-in-the-database-with-what-producers-vend">Slides
+11–12 — Case 3: Comparing What Is in the Database with What Producers
+Vend</h3>
+<p><strong>Time:</strong> 5 minutes total</p>
+<h4 id="business-problem-2">Business problem</h4>
+<p>During the database issue or modernization effort, the technical team
+needs the business team to verify what actually exists in the database
+versus what producers are vending. Manually gathering and comparing the
+information is slow, and the result can become stale or difficult to
+reproduce.</p>
+<h4 id="proposed-workflow-2">Proposed workflow</h4>
+<blockquote>
+<p>Plain-language business question → Agent creates a query/analysis
+plan → Approved read-only PostgreSQL call retrieves current information
+→ Results are compared with producer-vended records → Differences and
+exceptions are summarized → Domain owner verifies the findings</p>
+</blockquote>
+<p>Potential examples include Collibra datasets, glossary entries, or
+another work-domain object. Use one narrow example in the presentation
+rather than discussing every possible object.</p>
+<h4 id="agent-skill-and-harness-2">Agent, skill, and harness</h4>
+<table>
+<thead>
+<tr class="header">
+<th>Element</th>
+<th>In this case</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Agent</td>
+<td>Plans the analysis, invokes the approved read-only query, and
+explains discrepancies.</td>
+</tr>
+<tr class="even">
+<td>Skill</td>
+<td>Knowledge of schemas, object definitions, comparison logic, and how
+to present exceptions.</td>
+</tr>
+<tr class="odd">
+<td>Harness</td>
+<td>Read-only database connection, approved credentials handling, query
+limits, auditability, and no write/delete privileges.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="what-to-show-2">What to show</h4>
+<ol type="1">
+<li>The business question in plain language.</li>
+<li>A simple “database versus producer” comparison table.</li>
+<li>One discrepancy and the evidence supporting it.</li>
+<li>The human validation step before the result is treated as a
+finding.</li>
+</ol>
+<p>Do not make SQL the centerpiece. If code is shown, annotate only the
+one or two lines that demonstrate scope and read-only behavior.</p>
+<h4 id="measures-to-collect-later-2">Measures to collect later</h4>
+<ul>
+<li>Time required to perform a reconciliation.</li>
+<li>Number of records or exceptions reviewed.</li>
+<li>Reproducibility of the query and comparison.</li>
+<li>False-positive rate after domain review.</li>
+</ul>
+<h4 id="boundary-to-state-clearly-1">Boundary to state clearly</h4>
+<p>The agent should not receive unrestricted credentials, improvise
+against unknown production structures, or alter the database. Generated
+queries must be scoped, reviewable, and executed only through an
+approved read-only path.</p>
+<p><strong>Transition:</strong></p>
+<blockquote>
+<p>“This worked because the agent had access to a specific analysis
+method. The final example shows how that method can become a reusable
+business capability instead of a one-off conversation.”</p>
+</blockquote>
+<hr />
+<h3 id="slides-1314--case-4-rationalization-as-a-reusable-skill">Slides
+13–14 — Case 4: Rationalization as a Reusable Skill</h3>
+<p><strong>Time:</strong> 5 minutes total</p>
+<h4 id="business-problem-3">Business problem</h4>
+<p>Rationalization work is repeated across Knowledge Explorer, Collibra,
+spreadsheets, and other sources. The business team repeatedly applies
+similar matching logic, definitions, exception rules, and review
+decisions. When that knowledge stays in individual heads or one-time
+prompts, the work is hard to scale and inconsistent.</p>
+<h4 id="proposed-workflow-3">Proposed workflow</h4>
+<blockquote>
+<p>Approved source records → Rationalization skill applies documented
+rules → Potential duplicates or conflicts are scored → Exceptions are
+placed in a review queue → Steward decides retain/merge/retire/escalate
+→ Decision and rationale are recorded</p>
+</blockquote>
+<h4 id="what-becomes-the-skill">What becomes the skill</h4>
+<ul>
+<li>The definition of a potential match.</li>
+<li>Normalization and comparison rules.</li>
+<li>Thresholds or confidence bands.</li>
+<li>Known exceptions and protected terms.</li>
+<li>Required evidence.</li>
+<li>Allowed recommendations.</li>
+<li>Output format and reviewer instructions.</li>
+</ul>
+<h4 id="what-the-harness-supplies">What the harness supplies</h4>
+<ul>
+<li>Approved access to source systems or exported data.</li>
+<li>Limits on which domains and records may be processed.</li>
+<li>Versioned rules and examples.</li>
+<li>A review queue rather than automatic destructive action.</li>
+<li>Audit records showing the recommendation, evidence, and
+decision.</li>
+</ul>
+<h4 id="core-lesson-1">Core lesson</h4>
+<blockquote>
+<p>A successful prompt helps once. A well-designed skill helps
+repeatedly. A controlled harness makes that skill usable by more
+people.</p>
+</blockquote>
+<h4 id="measures-to-collect-later-3">Measures to collect later</h4>
+<ul>
+<li>Time per rationalization batch.</li>
+<li>Reviewer agreement with recommendations.</li>
+<li>False-match and missed-match rates.</li>
+<li>Backlog reduction.</li>
+<li>Consistency across reviewers or domains.</li>
+</ul>
+<h4 id="boundary-to-state-clearly-2">Boundary to state clearly</h4>
+<p>The agent may identify and explain candidates. A steward or
+authorized owner should make consequential merge, retire, or deletion
+decisions.</p>
+<hr />
+<h3 id="slide-15--four-different-cases-one-repeatable-pattern">Slide 15
+— Four Different Cases, One Repeatable Pattern</h3>
+<p><strong>Time:</strong> 2 minutes</p>
+<p><strong>Purpose:</strong> Prevent the audience from treating the
+examples as solutions only you can use.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Email</th>
+<th>Scorecard</th>
+<th>Database comparison</th>
+<th>Rationalization</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Trigger</td>
+<td>Incoming request</td>
+<td>Business need</td>
+<td>Investigation question</td>
+<td>Record batch/backlog</td>
+</tr>
+<tr class="even">
+<td>Skill</td>
+<td>Route and draft</td>
+<td>Clarify and prototype</td>
+<td>Query and reconcile</td>
+<td>Normalize and compare</td>
+</tr>
+<tr class="odd">
+<td>Tool</td>
+<td>Outlook/Ask Genie</td>
+<td>Prototyping environment</td>
+<td>Read-only PostgreSQL</td>
+<td>Approved sources/review queue</td>
+</tr>
+<tr class="even">
+<td>Human checkpoint</td>
+<td>Review before send</td>
+<td>Validate requirements</td>
+<td>Confirm findings</td>
+<td>Approve disposition</td>
+</tr>
+<tr class="odd">
+<td>Output</td>
+<td>Draft response</td>
+<td>Story + prototype</td>
+<td>Evidence-backed exceptions</td>
+<td>Reviewed recommendations</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key question to ask the audience:</strong></p>
+<blockquote>
+<p>“Which column looks most like a task you perform today?”</p>
+</blockquote>
+<hr />
+<h3 id="slide-16--experiment-safely-not-every-task-has-the-same-risk">Slide
+16 — Experiment Safely: Not Every Task Has the Same Risk</h3>
+<p><strong>Time:</strong> 3 minutes</p>
+<p><strong>Purpose:</strong> Give practical guardrails without making
+the session feel prohibitive.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Starting zone</th>
+<th>Examples</th>
+<th>Minimum expectation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Green: good first experiments</strong></td>
+<td>Format requirements, summarize user-provided nonsensitive text,
+create a prototype with dummy data, draft a checklist.</td>
+<td>Review the output; do not treat it as automatically correct.</td>
+</tr>
+<tr class="even">
+<td><strong>Yellow: controlled experiments</strong></td>
+<td>Read internal email, query an internal database, generate or execute
+scripts, analyze sensitive internal content.</td>
+<td>Approved environment, least-privilege access, data controls,
+testing, human verification, and technical escalation path.</td>
+</tr>
+<tr class="odd">
+<td><strong>Red: do not improvise</strong></td>
+<td>Auto-send communications, write/delete production data, execute an
+unreviewed script, upload restricted data to an unauthorized tool,
+deploy without an owner.</td>
+<td>Formal approval and established production controls; often the
+action should remain prohibited for an experiment.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Important language:</strong></p>
+<p>Do not say that the risks “are not that big.” Say:</p>
+<blockquote>
+<p>“The risks are manageable when we match the controls to the
+consequence of the task.”</p>
+</blockquote>
+<p><strong>Three nonnegotiables:</strong></p>
+<ol type="1">
+<li>Use only approved tools and data access.</li>
+<li>Keep the human accountable for consequential decisions and external
+actions.</li>
+<li>Escalate when you cannot explain what a script, query, or result is
+doing.</li>
+</ol>
+<hr />
+<h3 id="slide-17--what-happens-after-this-presentation">Slide 17 — What
+Happens After This Presentation?</h3>
+<p><strong>Time:</strong> 1 minute</p>
+<p><strong>Purpose:</strong> Prevent enthusiasm from turning into an
+unsupported flood of requests.</p>
+<p><strong>Recommended call to action:</strong></p>
+<blockquote>
+<p>Choose one repetitive, low-risk task that takes 30–90 minutes, occurs
+at least twice a month, has a recognizable “good” result, and still
+allows a human to approve the outcome.</p>
+</blockquote>
+<p>Ask participants to capture it using the Agent Opportunity Canvas in
+the appendix.</p>
+<p><strong>The slide must also name the real support path:</strong></p>
+<ul>
+<li>Where to submit an idea.</li>
+<li>Who confirms whether the tool and data access are allowed.</li>
+<li>Where sandboxing occurs.</li>
+<li>Who helps package a successful experiment into a reusable
+skill.</li>
+<li>Who owns and supports it if it scales.</li>
+</ul>
+<p>Do not present this call to action until Asta, Shiba, Lisa, or the
+appropriate sponsors confirm the operating model.</p>
+<hr />
+<h3 id="slide-18--our-expertise-must-shape-the-agents">Slide 18 — Our
+Expertise Must Shape the Agents</h3>
+<p><strong>Time:</strong> 5 minutes including discussion</p>
+<p><strong>Closing message:</strong></p>
+<blockquote>
+<p>Other teams can build governance technology, but our team understands
+the criteria, exceptions, and decisions that make governance work. If we
+participate early, our expertise becomes part of the capability. If we
+wait, others may encode those decisions without the domain owners.</p>
+</blockquote>
+<p><strong>Final challenge:</strong></p>
+<blockquote>
+<p>“What is one piece of work you would teach a new analyst to do—and
+what would have to be true before you trusted an agent to help with
+it?”</p>
+</blockquote>
+<p>Use responses to transition into questions and surface candidate
+workflows.</p>
+<hr />
+<h2 id="6-demonstration-strategy">6. Demonstration strategy</h2>
+<p>The presentation will be stronger if each case is shown as a short
+story rather than a live technical walkthrough.</p>
+<h3 id="recommended-demonstration-format">Recommended demonstration
+format</h3>
+<p>For each case, use the same five-frame structure:</p>
+<ol type="1">
+<li><strong>Before:</strong> What takes time or creates confusion
+today?</li>
+<li><strong>Request:</strong> What outcome did you give the agent?</li>
+<li><strong>Work:</strong> What skill and approved tool did it use?</li>
+<li><strong>Review:</strong> Where did you correct, verify, or approve
+the result?</li>
+<li><strong>After:</strong> What useful artifact was produced?</li>
+</ol>
+<h3 id="live-versus-recorded">Live versus recorded</h3>
+<ul>
+<li>Prefer staged screenshots or a 60–90 second recording for Outlook
+and database examples. This avoids sensitive data exposure, connection
+failures, and unpredictable response time.</li>
+<li>A short live interaction can work for the EDG Scorecard prototype if
+the prompt and output are stable.</li>
+<li>Always retain backup screenshots of the expected result.</li>
+<li>Never use a live production inbox, credentials, confidential
+records, or unrestricted database connection on screen.</li>
+</ul>
+<h3 id="how-much-code-to-show">How much code to show</h3>
+<p>Show enough to make the enabling mechanism real, but not enough to
+turn the session into code review.</p>
+<ul>
+<li>One small, annotated PowerShell excerpt is sufficient.</li>
+<li>One small, annotated read-only query is sufficient.</li>
+<li>Put full scripts, query details, and architecture in the
+appendix.</li>
+<li>Make the business input, output, and human checkpoint larger than
+the code.</li>
+</ul>
+<blockquote>
+<p>Do not make the code the proof. Make the improved workflow the
+proof.</p>
+</blockquote>
+<hr />
+<h2 id="7-asset-checklist">7. Asset checklist</h2>
+<h3 id="foundation-slides">Foundation slides</h3>
+<ul>
+<li>A bridge visual: business expertise → controlled agentic workflow →
+validated outcome.</li>
+<li>Three-card visual for Agent, Skill, and Harness.</li>
+<li>One end-to-end flow with human checkpoints.</li>
+<li>Workslop versus useful-work comparison.</li>
+</ul>
+<h3 id="case-1-assets">Case 1 assets</h3>
+<ul>
+<li>Sanitized sample email.</li>
+<li>Screenshot of sender/folder filter.</li>
+<li>Small PowerShell or connector excerpt.</li>
+<li>Domain-routing result.</li>
+<li>Draft response with “human reviews before send” callout.</li>
+</ul>
+<h3 id="case-2-assets">Case 2 assets</h3>
+<ul>
+<li>Original conversational prompt.</li>
+<li>Agent&#39;s clarifying questions.</li>
+<li>One before/after prompt comparison.</li>
+<li>EDG Scorecard prototype screenshot.</li>
+<li>User story and two or three acceptance criteria.</li>
+</ul>
+<h3 id="case-3-assets">Case 3 assets</h3>
+<ul>
+<li>One plain-language investigation question.</li>
+<li>Sanitized read-only query excerpt.</li>
+<li>Database-versus-vended comparison table.</li>
+<li>One discrepancy with supporting evidence.</li>
+<li>Human validation note.</li>
+</ul>
+<h3 id="case-4-assets">Case 4 assets</h3>
+<ul>
+<li>Small sample of raw rationalization candidates.</li>
+<li>Example rule set.</li>
+<li>Recommendation/review queue.</li>
+<li>Steward decision and rationale.</li>
+</ul>
+<h3 id="closing-assets">Closing assets</h3>
+<ul>
+<li>Green/yellow/red risk table.</li>
+<li>Agent Opportunity Canvas.</li>
+<li>Confirmed intake and support path.</li>
+</ul>
+<hr />
+<h2 id="8-leadership-decisions-required-before-the-session">8.
+Leadership decisions required before the session</h2>
+<p>Talk with Asta and Shiba, and confirm sponsorship or direction from
+Lisa as appropriate. The objective is to avoid creating demand without a
+supported next step.</p>
+<h3 id="questions-to-resolve">Questions to resolve</h3>
+<ol type="1">
+<li><strong>What is the intended outcome?</strong> Is this education
+only, an invitation to experiment, or the launch of an adoption
+program?</li>
+<li><strong>Which tools are approved?</strong> Can the audience use a
+local agent, enterprise agent workspace, PowerShell, Python, HTML
+prototypes, Outlook access, or database connectors?</li>
+<li><strong>Where can experimentation occur?</strong> Is there an
+approved sandbox, test data, and provisioning process?</li>
+<li><strong>What data is allowed?</strong> Which classifications may be
+used, and what must be sanitized for the presentation?</li>
+<li><strong>Who provisions access?</strong> If 15 teams request agents
+or workspaces afterward, who handles intake and prioritization?</li>
+<li><strong>Who provides technical review?</strong> Where does a
+business user go when they cannot explain a generated script, query, or
+result?</li>
+<li><strong>Who owns reusable skills?</strong> Who approves, versions,
+maintains, and retires skills such as rationalization?</li>
+<li><strong>How does this connect to Ask Genie?</strong> Are local
+integrations with ICR, EDQ, or other personas supported, planned, or
+only conceptual?</li>
+<li><strong>What actions must remain human-only?</strong> Sending
+communications, database changes, record dispositions, and production
+deployment should be explicit.</li>
+<li><strong>What is the approved call to action?</strong> Idea
+submission, office hours, pilot cohort, or no immediate action?</li>
+</ol>
+<h3 id="recommended-operating-model-to-propose">Recommended operating
+model to propose</h3>
+<p>If no model exists, propose a small pilot rather than open-ended
+enablement:</p>
+<ol type="1">
+<li>Collect candidate workflows through a one-page canvas.</li>
+<li>Select three low-risk, high-frequency use cases.</li>
+<li>Run a two- to four-week sandbox with named business and technical
+owners.</li>
+<li>Measure baseline time, result quality, and reviewer effort.</li>
+<li>Package only the successful patterns into approved, reusable
+skills.</li>
+<li>Decide whether to scale, revise, or stop each pilot.</li>
+</ol>
+<hr />
+<h2 id="9-agent-opportunity-canvas">9. Agent Opportunity Canvas</h2>
+<p>Use this as an appendix slide or one-page handout.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Field</th>
+<th>Question</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Task</td>
+<td>What recurring work do you want help with?</td>
+</tr>
+<tr class="even">
+<td>Trigger</td>
+<td>What starts the work—an email, request, file, schedule, or
+question?</td>
+</tr>
+<tr class="odd">
+<td>Frequency and effort</td>
+<td>How often does it happen, and how much time does it take?</td>
+</tr>
+<tr class="even">
+<td>Inputs</td>
+<td>What information is needed, and how sensitive is it?</td>
+</tr>
+<tr class="odd">
+<td>Rules</td>
+<td>What steps, business definitions, and exceptions do you apply?</td>
+</tr>
+<tr class="even">
+<td>Tools</td>
+<td>Which systems must be read or used?</td>
+</tr>
+<tr class="odd">
+<td>Output</td>
+<td>What useful artifact or recommendation should be produced?</td>
+</tr>
+<tr class="even">
+<td>Human checkpoint</td>
+<td>What must a person verify or approve?</td>
+</tr>
+<tr class="odd">
+<td>Failure impact</td>
+<td>What could go wrong, and how serious would it be?</td>
+</tr>
+<tr class="even">
+<td>Success measure</td>
+<td>How will you know the workflow is faster, better, or more
+consistent?</td>
+</tr>
+</tbody>
+</table>
+<h3 id="good-first-use-case-test">Good first-use-case test</h3>
+<p>A candidate is promising when most answers are “yes”:</p>
+<ul>
+<li>Is it repetitive?</li>
+<li>Is the input available in a consistent form?</li>
+<li>Can a subject-matter expert explain the rules?</li>
+<li>Is a good output recognizable?</li>
+<li>Can the first version use dummy or low-risk data?</li>
+<li>Can a human review the result before any consequential action?</li>
+<li>Would saving 15–30 minutes each time create meaningful value?</li>
+</ul>
+<hr />
+<h2 id="10-how-to-talk-about-tokens-and-experimentation">10. How to talk
+about tokens and experimentation</h2>
+<p>The transcript&#39;s instinct is useful: people learn by trying, and
+early exploration can feel inefficient. The presentation should refine
+the message so it does not sound like token consumption is the goal.</p>
+<h3 id="recommended-framing">Recommended framing</h3>
+<blockquote>
+<p>“At first, experimentation is broad because we are learning what the
+agent needs. As patterns emerge, we stop repeating the same context and
+package the successful instructions, examples, and controls into
+reusable skills.”</p>
+</blockquote>
+<h3 id="practical-optimization-sequence">Practical optimization
+sequence</h3>
+<ol type="1">
+<li>Start with a narrow task and a clear outcome.</li>
+<li>Provide the relevant context rather than an entire history.</li>
+<li>Give one or two examples of a good result.</li>
+<li>State constraints and acceptance criteria.</li>
+<li>Correct the result and record why.</li>
+<li>Save the repeatable instructions as a skill.</li>
+<li>Reuse the skill through an approved harness.</li>
+</ol>
+<p>Tokens are an experimental budget, not a measure of productivity. The
+goal is fewer repeated explanations, better outputs, and shorter review
+cycles.</p>
+<hr />
+<h2 id="11-phrasing-to-strengthen-or-avoid">11. Phrasing to strengthen
+or avoid</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Avoid</th>
+<th>Use instead</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>“AI is a race to get the product out first.”</td>
+<td>“The advantage comes from learning quickly and converting what works
+into a reliable capability.”</td>
+</tr>
+<tr class="even">
+<td>“The risks aren&#39;t that big.”</td>
+<td>“The risks are manageable when controls match the consequence of the
+task.”</td>
+</tr>
+<tr class="odd">
+<td>“The agent does the work for me.”</td>
+<td>“The agent handles repeatable steps while I provide context,
+judgment, and approval.”</td>
+</tr>
+<tr class="even">
+<td>“You do not need technical people anymore.”</td>
+<td>“Business users can prototype and communicate more effectively,
+while technical expertise remains essential for safe integration and
+production.”</td>
+</tr>
+<tr class="odd">
+<td>“Just run the script the agent creates.”</td>
+<td>“Understand its purpose, test it in an approved sandbox, and seek
+technical review when the effect is unclear.”</td>
+</tr>
+<tr class="even">
+<td>“We are behind.”</td>
+<td>“We have an opportunity to ensure our governance expertise shapes
+these capabilities early.”</td>
+</tr>
+<tr class="odd">
+<td>“Use all your tokens.”</td>
+<td>“Use experimentation to discover reusable patterns, then make those
+patterns more efficient.”</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-suggested-opening-and-closing-scripts">12. Suggested opening
+and closing scripts</h2>
+<h3 id="opening-approximately-60-seconds">Opening: approximately 60
+seconds</h3>
+<blockquote>
+<p>“We hear a lot about agents, enterprise AI initiatives, data-quality
+agents, personas, and automation. But for many business users, the
+unanswered question is much simpler: where does any of this fit in my
+actual workday? I am not here to teach Python or turn everyone into a
+developer. I want to show how the expertise you already have can guide
+an agent through repeatable work—and how an agent, a skill, and a
+controlled workspace can help us find context, translate requirements,
+analyze information, and apply governance rules more consistently.”</p>
+</blockquote>
+<h3 id="transition-into-the-cases">Transition into the cases</h3>
+<blockquote>
+<p>“Rather than stay at the buzzword level, I will use four pieces of
+work our teams already recognize. For each one, watch for the same three
+elements: the agent doing the steps, the skill carrying our business
+knowledge, and the harness controlling the tools and boundaries.”</p>
+</blockquote>
+<h3 id="closing-approximately-75-seconds">Closing: approximately 75
+seconds</h3>
+<blockquote>
+<p>“The goal is not to automate every decision, and it is not to push
+unverified output into production. The goal is to remove avoidable
+effort while preserving the judgment that makes our governance work
+credible. Our team knows the criteria, exceptions, and context that
+these systems need. That means we should help shape the capabilities,
+not wait for someone else to encode our work for us. Start with one
+narrow, repetitive, low-risk task. Sandbox it, verify it, tune it, and
+package what works. Prototype quickly, but productionize
+deliberately.”</p>
+</blockquote>
+<hr />
+<h2 id="13-deck-design-guidance">13. Deck design guidance</h2>
+<h3 id="visual-direction">Visual direction</h3>
+<ul>
+<li>Use a 16:9 layout with a calm enterprise palette: navy, off-white,
+teal, and amber for caution.</li>
+<li>Use one idea per slide and large type; avoid paragraphs on the
+projected deck.</li>
+<li>Keep detailed explanations in speaker notes and the appendix.</li>
+<li>Use the same visual template for all four cases.</li>
+<li>Place a small footer on each case slide: <strong>Agent | Skill |
+Harness | Human checkpoint</strong>.</li>
+<li>Use arrows, annotated screenshots, and before/after comparisons
+instead of decorative AI imagery.</li>
+<li>Give every screenshot a short caption and two or three numbered
+callouts.</li>
+</ul>
+<h3 id="density-targets">Density targets</h3>
+<ul>
+<li>Headline: one complete takeaway, not just a topic label.</li>
+<li>Main-slide text: ideally fewer than 35 words, excluding a small
+table.</li>
+<li>Screenshot labels: three callouts maximum.</li>
+<li>Code: no more than 8–12 visible lines in the main deck.</li>
+<li>Appendix: full scripts, definitions, architecture, and detailed
+controls.</li>
+</ul>
+<h3 id="recommended-case-study-layout">Recommended case-study
+layout</h3>
+<p><strong>Left side:</strong> Today&#39;s friction<br />
+<strong>Center:</strong> Agent-enabled flow<br />
+<strong>Right side:</strong> Human checkpoint and useful output<br />
+<strong>Bottom strip:</strong> Potential measure of value</p>
+<hr />
+<h2 id="14-appendix-plan">14. Appendix plan</h2>
+<p>Keep technical depth available without forcing it into the core
+story.</p>
+<ol type="1">
+<li>Full terminology glossary.</li>
+<li>Agent versus chatbot comparison.</li>
+<li>Full Outlook/PowerShell flow and approved-access assumptions.</li>
+<li>EDG Scorecard prompt evolution and acceptance criteria.</li>
+<li>Database schema/query assumptions and read-only controls.</li>
+<li>Rationalization rule template.</li>
+<li>Green/yellow/red activity examples.</li>
+<li>Agent Opportunity Canvas.</li>
+<li>Proposed intake and pilot process.</li>
+<li>Sources, owners, and dates for enterprise initiative
+references.</li>
+</ol>
+<hr />
+<h2 id="15-items-to-confirm-from-the-transcript-before-building-the-deck">15.
+Items to confirm from the transcript before building the deck</h2>
+<p>Speech-to-text appears to have altered several internal terms.
+Confirm the official spelling and meaning before placing them on
+slides:</p>
+<ul>
+<li>“Asian cube” — confirm the intended enterprise initiative or product
+name.</li>
+<li>“BRP metrics” and “BRP agents” — confirm whether the acronym is BRP,
+BPR, or another program.</li>
+<li>“AS Genie” — confirm whether the official name is <strong>Ask
+Genie</strong> and whether ICR/EDQ are personas, agents, skills, or
+domains.</li>
+<li>“DB mod” — confirm the formal project or incident name.</li>
+<li>“DTCE” — confirm whether this should be <strong>DGCE</strong> or
+another platform.</li>
+<li>“post-scress” — use <strong>PostgreSQL</strong> if that is the
+intended database.</li>
+<li>“Calibra” — use <strong>Collibra</strong> if referring to the
+data-governance platform.</li>
+<li>“Plato&#39;s algorithm” — confirm the example and the point it is
+intended to illustrate.</li>
+</ul>
+<p>Also confirm which of the four examples are already working
+demonstrations versus proposed future-state workflows. Label them
+honestly as <strong>working today</strong>, <strong>prototype</strong>,
+or <strong>concept</strong>.</p>
+<hr />
+<h2 id="16-final-build-checklist">16. Final build checklist</h2>
+<h3 id="content">Content</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>The opening is about daily work, not
+AI history.</label></li>
+<li><label><input type="checkbox"></input>Agent, skill, and harness are
+defined once in plain language.</label></li>
+<li><label><input type="checkbox"></input>Workslop is addressed before the
+demonstrations.</label></li>
+<li><label><input type="checkbox"></input>Each case names the problem, skill,
+harness, human checkpoint, and value.</label></li>
+<li><label><input type="checkbox"></input>Prototypes are clearly separated
+from production capabilities.</label></li>
+<li><label><input type="checkbox"></input>Claims are measured or presented as
+metrics to collect—not invented savings.</label></li>
+<li><label><input type="checkbox"></input>The support path after the
+presentation is real and named.</label></li>
+</ul>
+<h3 id="safety-and-accuracy">Safety and accuracy</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>All screenshots and sample data are
+sanitized.</label></li>
+<li><label><input type="checkbox"></input>Enterprise names and acronyms are
+verified.</label></li>
+<li><label><input type="checkbox"></input>Outlook, Ask Genie, and database
+access assumptions are confirmed.</label></li>
+<li><label><input type="checkbox"></input>No live credential, production write
+access, or auto-send capability is shown.</label></li>
+<li><label><input type="checkbox"></input>Full scripts and queries receive the
+appropriate technical review.</label></li>
+<li><label><input type="checkbox"></input>A backup exists for every live
+demonstration.</label></li>
+</ul>
+<h3 id="delivery">Delivery</h3>
+<ul class="task-list">
+<li><label><input type="checkbox"></input>Rehearsal reaches Slide 16 by minute
+36.</label></li>
+<li><label><input type="checkbox"></input>Every case can be shortened to three
+minutes if needed.</label></li>
+<li><label><input type="checkbox"></input>The speaker can explain all four
+cases without reading code.</label></li>
+<li><label><input type="checkbox"></input>The final question invites one
+concrete workflow from the audience.</label></li>
+<li><label><input type="checkbox"></input>Asta, Shiba, Lisa, or the correct
+sponsors approve the call to action.</label></li>
+</ul>
+<hr />
+<h2 id="final-recommendation">Final recommendation</h2>
+<p>Build the presentation around one memorable idea:</p>
+<blockquote>
+<p><strong>The agent supplies adaptable execution. The skill carries our
+expertise. The harness makes the work controlled and reusable. The human
+remains accountable.</strong></p>
+</blockquote>
+<p>If every slide reinforces some part of that sentence, the audience
+will leave with a practical mental model rather than another list of AI
+buzzwords.</p>
+  </main>
+</body>
+</html>
